@@ -252,22 +252,13 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, {
 }, id, source, allowed, engines, spheres) {
     console.log(engines)
     let iteration = 0
-    const positionsQueue = []
     const bestFound = new Map()
+    const prequelPosition = new Position(0,0,0,0,0,source.node,null,null,0,null,engines)
+    const startingPositions = prequelPosition.waitTurn(spheres)
+    bestFound.set(source.node, startingPositions)
+    const positionsQueue = startingPositions
 
-    bestFound.set(source.node, [])
 
-    // const positionsHeap = new Heap(null, weightCompare)
-    for (const engine of engines) {
-        // if(!(engine.pivots&&engine.baseThrust&&engine.burnCost)){
-        //     console.log("Missing engine data")
-        //     return null
-        // }
-        const zeroPosition = new Position(1, 0, engine.baseThrust, engine.pivots, 0, source.node, engine, null, 0, null, engines)
-        positionsQueue.push(zeroPosition)
-        bestFound.get(source.node).push(zeroPosition)
-    }
-    // positionsHeap.insert(zero_position.weight(), zero_position)
 
 
     while (positionsQueue.length > 0) {
