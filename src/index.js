@@ -135,7 +135,7 @@ function calculateSpheres() {
     for (let sphereId = 0; sphereId < sphereSeparators.length + 1; sphereId++) {
         const visitedPoints = new Set()
         const queue = [startingPointNearNeptun]
-        if (sphereId == 1) {
+        if (sphereId === 1) {
             queue.push(startingPointNearUranus)
         }
         while (queue.length > 0) {
@@ -555,7 +555,7 @@ function findPath(fromId) {
     console.time('calculating paths')
 
     const source = {node: fromId, dir: null, bonus: 0}
-    const pathData = dijkstra(getNeighbors, burnsTurnsHazardsSegments, distance, pathId, source, allowed2, engines)
+    const pathData = dijkstra(getNeighbors, burnsTurnsHazardsSegments, distance, pathId, source, allowed2, engines,sphere)
 
     console.timeEnd('calculating paths')
 
@@ -618,7 +618,7 @@ function setIsru(e) {
     draw()
 }
 
-//example: (3,2,1);(123,123,123)
+//example: (3,2,1);(1,0,solar)
 function setEngines(newEnginesStr) {
     const newEngines = []
     for (let engineStr of newEnginesStr.split(";")) {
@@ -631,10 +631,12 @@ function setEngines(newEnginesStr) {
             console.log({0: splitted[0], 1: splitted[1], 2: splitted[2]})
             return 0
         }
+        const solarPowered = engineStr.split(",").includes("solar")
         newEngines.push({
             baseThrust: splitted[0],
             burnCost: splitted[1],
-            pivots: splitted[2]
+            pivots: splitted[2],
+            solarPowered: solarPowered
         })
     }
     engines = newEngines

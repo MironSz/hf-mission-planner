@@ -17,14 +17,18 @@ export class Position {
             this.engines = engines
         else
             this.engines = previous.engines
-        this.thrustModifier = 0
+        this.thrust = 0
         if(freeBurns>10){
+            console.log("WARNING  big free burn")
             console.log(this)
         }
     }
 
-    getThrust() {
-        return this.currentEngine.baseThrust + this.thrustModifier
+    getThrust(spheres, engine) {
+        if (engine.solarPowered) {
+            return engine.baseThrust + spheres.get(this.site)
+        } else
+            return engine.baseThrust
     }
 
     toTupple() {
@@ -59,12 +63,13 @@ export class Position {
     }
 
 
-    waitTurn() {
+    waitTurn(spheres) {
         const changedEngine = []
         for (const activeEngine of this.engines) {
-            changedEngine.push(
-                new Position(this.turn + 1, this.burns, activeEngine.baseThrust, this.currentEngine.pivots, this.risks, this.site, activeEngine, this, 0, null)
-            )
+            const thrust = this.getThrust(spheres, activeEngine)
+            const nextPosition = new Position(this.turn + 1, this.burns, thrust, activeEngine.pivots, this.risks, this.site, activeEngine, this, 0, null)
+            nextPosition.thrust = thrust
+            changedEngine.push(nextPosition)
         }
         for (const position of changedEngine) {
             position.tag = "waiting a turn"
@@ -123,7 +128,7 @@ function isPositionBest(position, bestPositionInNode) {
 }
 
 
-function singleBurn(currentPosition, burnTurnRisk, neighbour) {
+function singleBurn(currentPosition, burnTurnRisk, neighbour, spheres) {
     // console.log({burn: burnTurnRisk})
 
     var reachablePositions = []
@@ -157,13 +162,13 @@ function singleBurn(currentPosition, burnTurnRisk, neighbour) {
 
         reachablePositions.push(nextPosition)
     } else {
-        reachablePositions = reachablePositions.concat(currentPosition.waitTurn())
+        reachablePositions = reachablePositions.concat(currentPosition.waitTurn(spheres))
     }
     return reachablePositions
 
 }
 
-function singleTurn(currentPosition, burnTurnRisk, neighbour) {
+function singleTurn(currentPosition, burnTurnRisk, neighbour, spheres) {
 
     var reachablePositions = []
     //If a turn was made, check if we can make it using pivot
@@ -200,22 +205,22 @@ function singleTurn(currentPosition, burnTurnRisk, neighbour) {
     }
     //If no pivots are possible, wait a year AND do try to turn by burning
     if (currentPosition.pivotsRemaining === 0) {
-        reachablePositions = reachablePositions.concat(currentPosition.waitTurn())
+        reachablePositions = reachablePositions.concat(currentPosition.waitTurn(spheres))
     }
     return reachablePositions
 }
 
-function reachablePositions(currentPosition, burnTurnRiskArray, neighbour) {
+function reachablePositions(currentPosition, burnTurnRiskArray, neighbour, spheres) {
     // if (neighbour.bonus !== 0)
     //     console.log(neighbour)
     const burnTurnRisk = {burns: burnTurnRiskArray[0], turns: burnTurnRiskArray[1], risks: burnTurnRiskArray[2]}
     // console.log(burnTurnRisk)
     let reachablePositions = []
     if (burnTurnRisk.burns === 1) {
-        const burnPositions = singleBurn(currentPosition, burnTurnRisk, neighbour)
+        const burnPositions = singleBurn(currentPosition, burnTurnRisk, neighbour, spheres)
         reachablePositions = reachablePositions.concat(burnPositions)
     } else if (burnTurnRisk.turns === 1) {
-        reachablePositions = reachablePositions.concat(singleTurn(currentPosition, burnTurnRisk, neighbour))
+        reachablePositions = reachablePositions.concat(singleTurn(currentPosition, burnTurnRisk, neighbour, spheres))
     } else {
         // Nothing happened, cruising through lagrange point or sth, chilling in my spacecraft while being oblivious to the dangers od space travel
         const nextPosition = new Position(currentPosition.turn,
@@ -226,7 +231,7 @@ function reachablePositions(currentPosition, burnTurnRiskArray, neighbour) {
             neighbour.node,
             currentPosition.currentEngine,
             currentPosition,
-            currentPosition.freeBurns+neighbour.bonus,
+            currentPosition.freeBurns + neighbour.bonus,
             // currentPosition.freeBurns + neighbour.bonus,
             neighbour.dir)
         nextPosition.tag = "crusing"
@@ -240,7 +245,11 @@ function reachablePositions(currentPosition, burnTurnRiskArray, neighbour) {
 
 //getNeighbours: (site,direction, bonus burns)->[(site,direction, bonus burns)]
 // allowed: (id,id)-->bool
-export function dijkstra(getNeighbors, burnTurnRiskExtractor, {zero, add, lessThan}, id, source, allowed, engines) {
+export function dijkstra(getNeighbors, burnTurnRiskExtractor, {
+    zero,
+    add,
+    lessThan
+}, id, source, allowed, engines, spheres) {
     console.log(engines)
     let iteration = 0
     const positionsQueue = []
@@ -302,7 +311,7 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, {zero, add, lessTh
             }
             const burnTurnRisk = burnTurnRiskExtractor(currentPosition.toTupple(), neighbour)
 
-            const nextPositions = reachablePositions(currentPosition, burnTurnRisk, neighbour)
+            const nextPositions = reachablePositions(currentPosition, burnTurnRisk, neighbour, spheres)
             const nextPositions2 = nextPositions.filter(x => {
                 return isPositionBest(x, nextPositions)
             })
