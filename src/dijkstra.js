@@ -2,6 +2,7 @@ import Heap from './heap'
 
 export class Position {
     constructor(turn, burns, burnRemaining, pivots, risks, site, engine, previous, freeBurns, direction, engines) {
+
         this.turn = turn
         this.burns = burns
         this.burnsRemaining = burnRemaining
@@ -17,13 +18,17 @@ export class Position {
         else
             this.engines = previous.engines
         this.thrustModifier = 0
+        if(freeBurns>10){
+            console.log(this)
+        }
     }
-    getThrust(){
-        return this.currentEngine.baseThrust+this.thrustModifier
+
+    getThrust() {
+        return this.currentEngine.baseThrust + this.thrustModifier
     }
 
     toTupple() {
-        return {node: this.site, dir: this.direction, bonus: this.freeBurns}
+        return {node: this.site, dir: this.direction, bonus: 0}
     }
 
     // porównaj turn, burns, burns_remaining, freeBurns, risks, pivotsRemaining
@@ -44,6 +49,9 @@ export class Position {
         if (this.burnsRemaining < position.burnsRemaining) {
             return true
         }
+        if (this.freeBurns < position.freeBurns) {
+            return true
+        }
         if (this.turn > position.turn) {
             return true
         }
@@ -59,7 +67,7 @@ export class Position {
             )
         }
         for (const position of changedEngine) {
-            position.tag = "waitating a turn"
+            position.tag = "waiting a turn"
         }
         // console.log("Changing engine")
         // console.log(changedEngine)
@@ -198,6 +206,8 @@ function singleTurn(currentPosition, burnTurnRisk, neighbour) {
 }
 
 function reachablePositions(currentPosition, burnTurnRiskArray, neighbour) {
+    // if (neighbour.bonus !== 0)
+    //     console.log(neighbour)
     const burnTurnRisk = {burns: burnTurnRiskArray[0], turns: burnTurnRiskArray[1], risks: burnTurnRiskArray[2]}
     // console.log(burnTurnRisk)
     let reachablePositions = []
@@ -216,7 +226,8 @@ function reachablePositions(currentPosition, burnTurnRiskArray, neighbour) {
             neighbour.node,
             currentPosition.currentEngine,
             currentPosition,
-            currentPosition.freeBurns,
+            currentPosition.freeBurns+neighbour.bonus,
+            // currentPosition.freeBurns + neighbour.bonus,
             neighbour.dir)
         nextPosition.tag = "crusing"
         reachablePositions.push(nextPosition)
@@ -318,6 +329,5 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, {zero, add, lessTh
             })
         }
     }
-    console.log(bestFound)
     return bestFound
 }

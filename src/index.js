@@ -29,7 +29,6 @@ const canvas = document.createElement('canvas')
 const overlay = document.createElement('div')
 
 const sphereSeparators = [sphere7, sphere6, sphere5, sphere4, sphere3, sphere2, sphere1, sphere0]
-const sphereSeparators2 = []
 const sphere = new Map()
 
 
@@ -115,10 +114,6 @@ canvas.onclick = e => {
         if (!closestId) {
             return
         }
-        console.log("closest id")
-        console.log(closestId)
-        sphereSeparators2.push(closestId)
-        console.log(sphereSeparators2)
         if (canPath(closestId)) {
             highlightedPath = extractPathFromSearchTree(pathOrigin, closestId, searchTree)
 
@@ -137,7 +132,6 @@ function calculateSpheres() {
 
     const startingPointNearNeptun = '0.8393093402425826'
     const startingPointNearUranus = '0.7700452967993057'
-    console.log(edgeLabels)
     for (let sphereId = 0; sphereId < sphereSeparators.length + 1; sphereId++) {
         const visitedPoints = new Set()
         const queue = [startingPointNearNeptun]
@@ -413,13 +407,13 @@ function thrustRequired(index) {
 
 // Is movement from u to v allowed (in the same turn)
 function allowed2(u, v, id) {
-    return true
     if (u.previous == null || v.previous == null) {
         return true
     }
     //No movement occurred
     if (u.site === v.site) return true
-
+    if (v.previous.site === u.site || u.previous.site === v.site)
+        return false
     return true
 }
 
