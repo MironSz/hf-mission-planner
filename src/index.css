@@ -35,14 +35,14 @@ canvas { display: block; }
 
 .VehicleInfo {
   color: white;
-  font-size: 20px;
+  font-size: 15px;
   font-family: sans-serif;
   background: black;
   border-top: 4px solid white;
   border-left: 4px solid white;
   border-top-left-radius: 8px;
-  width: 120px;
-  padding: 16px;
+  width: 1000px;
+  padding: 2px;
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
   pointer-events: auto;
 }

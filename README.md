@@ -17,7 +17,7 @@ The tool will load with the view over Earth, where the air is free and the breat
 
 If you're developing this tool you might want to edit the map data to fix errors or update the map to a new version. You're in luck, HF Mission Planner has an edit mode optimized for fast input (and certainly not for ease of learning or intuitiveness). If you find yourself in a position to use it, the best reference is probably the source code, but here's a list of keyboard shortcuts as of writing:
 
-- <kbd>Tab</kbd> - toggle between edit mode and view mode.
+- <kbd>Tab</kbd> - toggle between edit mode and view mode.:
 - Click to place a new node. The default node type is Hohmann, indicated by a green circle.
 - <kbd>X</kbd> - delete hovered node.
 - <kbd>M</kbd> - move hovered node to the current cursor position.

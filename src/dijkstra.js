@@ -1,105 +1,82 @@
 import Heap from './heap'
 
 export class Position {
-    constructor(turn, burns, burn_remaining, pivots, risks, site, engine, previous, free_burns, direction) {
+    constructor(turn, burns, burnRemaining, pivots, risks, site, engine, previous, freeBurns, direction, engines) {
         this.turn = turn
         this.burns = burns
-        this.burn_remaining = burn_remaining
-        this.pivots_remaining = pivots
+        this.burnsRemaining = burnRemaining
+        this.pivotsRemaining = pivots
         this.risks = risks
         this.site = site
-        this.current_engine = engine
+        this.currentEngine = engine
         this.previous = previous
-        this.free_burns = free_burns
+        this.freeBurns = freeBurns
         this.direction = direction
+        if (previous == null)
+            this.engines = engines
+        else
+            this.engines = previous.engines
+        this.thrustModifier = 0
     }
-
-    weight() {
-        const maxBurn = 3
-        return this.turn / maxBurn + this.burns
+    getThrust(){
+        return this.currentEngine.baseThrust+this.thrustModifier
     }
 
     toTupple() {
-        return {node: this.site, dir: this.direction, bonus: this.free_burns}
+        return {node: this.site, dir: this.direction, bonus: this.freeBurns}
     }
 
-    // porównaj turn, burns, burns_remaining, free_burns, risks, pivots_remaining
-    isBetterThan(second_position) {
-        if (this.direction !== second_position.direction) {
-            return 0
+    // porównaj turn, burns, burns_remaining, freeBurns, risks, pivotsRemaining
+    isNotDominating(position) {
+        // if (this.burns - this.currentEngine.burnCost(this.freeBurns +this.pivotsRemaining*2)> position.burns - position.currentEngine.burnCost*(position.freeBurns+2*position.pivotsRemaining))
+        // This is not better if position has better potential (which may not be used) than the number of burns we already did
+        // if (this.burns > position.burns - position.currentEngine.burnCost * (position.freeBurns + 2 * position.pivotsRemaining))
+        if (position.direction !== this.direction)
+            return true
+        if (this.burns > position.burns)//- position.currentEngine.burnCost * (position.freeBurns + 2 * position.pivotsRemaining))
+            return true
+
+        if (this.risks > position.risks)
+            return true
+        if (this.pivotsRemaining < position.pivotsRemaining) {
+            return true
         }
-        // -1 : this is better
-        // 1 : second_position is better
-        // 0: can't compare
-        let smaller_compares = []
-        if (this.turn < second_position.turn)
-            smaller_compares.push(-1)
-        else if (this.turn > second_position.turn)
-            smaller_compares.push(1)
-        else
-            smaller_compares.push(0)
-
-
-        if (this.burns < second_position.burns)
-            smaller_compares.push(-1)
-        else if (this.burns > second_position.burns)
-            smaller_compares.push(1)
-        else
-            smaller_compares.push(0)
-
-        if (this.risks < second_position.risks)
-            smaller_compares.push(-1)
-        else if (this.risks > second_position.risks)
-            smaller_compares.push(1)
-        else
-            smaller_compares.push(0)
-
-
-        if (this.free_burns > second_position.free_burns)
-            smaller_compares.push(-1)
-        else if (this.free_burns < second_position.free_burns)
-            smaller_compares.push(1)
-        else
-            smaller_compares.push(0)
-
-        if (this.pivots_remaining > second_position.pivots_remaining)
-            smaller_compares.push(-1)
-        else if (this.pivots_remaining < second_position.pivots_remaining)
-            smaller_compares.push(1)
-        else
-            smaller_compares.push(0)
-
-        if (this.burn_remaining > second_position.burn_remaining)
-            smaller_compares.push(-1)
-        else if (this.burn_remaining < second_position.burn_remaining)
-            smaller_compares.push(1)
-        else
-            smaller_compares.push(0)
-
-
-        // //console.log(smaller_compares)
-        if (smaller_compares.includes(-1) && !smaller_compares.includes(1))
-            return -1
-        else if (smaller_compares.includes(1) && !smaller_compares.includes(-1))
-            return 1
-        else
-            return 0
+        if (this.burnsRemaining < position.burnsRemaining) {
+            return true
+        }
+        if (this.turn > position.turn) {
+            return true
+        }
+        return false
     }
+
 
     waitTurn() {
-        return new Position(this.turn + 1, this.burns, this.current_engine.burns + 1, this.current_engine.pivots, this.risks, this.site, this.current_engine, this, 0, null)
+        const changedEngine = []
+        for (const activeEngine of this.engines) {
+            changedEngine.push(
+                new Position(this.turn + 1, this.burns, activeEngine.baseThrust, this.currentEngine.pivots, this.risks, this.site, activeEngine, this, 0, null)
+            )
+        }
+        for (const position of changedEngine) {
+            position.tag = "waitating a turn"
+        }
+        // console.log("Changing engine")
+        // console.log(changedEngine)
+        return changedEngine
     }
 
     pEquals(secondPosition) {
+        // console.log({dir1: this.direction, dir2: secondPosition.direction, cmp : this.direction !== secondPosition.direction})
         if (this.burns !== secondPosition.burns)
             return false
         if (this.turn !== secondPosition.turn)
             return false
-        if (this.pivots_remaining !== secondPosition.pivots_remaining)
+        if (this.pivotsRemaining !== secondPosition.pivotsRemaining)
             return false
         if (this.risks !== secondPosition.risks)
             return false
-        if (this.burn_remaining !== secondPosition.burn_remaining)
+        if (this.burnsRemaining !== secondPosition.burnsRemaining)
             return false
         if (this.direction !== secondPosition.direction)
             return false
@@ -107,141 +84,141 @@ export class Position {
             return false
         // console.log("Positions equal")
         return true
-        // if (this.burn_remaining !== secondPosition.burn_remaining)
+        // if (this.burnsRemaining !== secondPosition.burnsRemaining)
         //     return false
     }
 }
 
-function weightCompare(position1, position2) {
-    return position1.weight() < position2.weight()
+function checkThrust(position, siteId) {
+
 }
 
 
 function isPositionBest(position, bestPositionInNode) {
-
-    // console.log("isPositionBest")
-    // console.log(position)
-    // console.log(bestPositionInNode)
     if (bestPositionInNode != null && bestPositionInNode.length > 0) {
         for (const positionInNode of bestPositionInNode) {
             // If there exist position which is better or equal
-            if (positionInNode.isBetterThan(position) === 1 || positionInNode.pEquals(position)) {
+            if (!positionInNode.isNotDominating(position) || positionInNode.pEquals(position)) {
+                // console.log("Found better")
+                // console.log({u:position,v:positionInNode, cmp: positionInNode.isNotDominating(position) ,  eq: positionInNode.pEquals(positionInNode) })
+                // if (positionInNode.isBetterThan(position) === 1 || positionInNode.pEquals(position)) {
                 // console.log("It is not")
                 return false
             }
         }
     }
-    // //console.log("It is")
+    // console.log("Didnt find better")
+    // console.log({u:position})
+
     return true
 
 }
 
 
 function singleBurn(currentPosition, burnTurnRisk, neighbour) {
-    //console.log("Making a burn")
-    const reachablePositions = []
-    if (currentPosition.free_burns > 0) {
-        //console.log("using free burn")
+    // console.log({burn: burnTurnRisk})
+
+    var reachablePositions = []
+    if (currentPosition.freeBurns > 0) {
         const nextPosition = new Position(currentPosition.turn,
             currentPosition.burns,
-            currentPosition.burn_remaining,
-            currentPosition.pivots_remaining,
+            currentPosition.burnsRemaining,
+            currentPosition.pivotsRemaining,
             currentPosition.risks,
             neighbour.node,
-            currentPosition.current_engine,
+            currentPosition.currentEngine,
             currentPosition,
-            currentPosition.free_burns - 1,
+            currentPosition.freeBurns - 1,
             neighbour.dir)
+        nextPosition.tag = "free burn"
         reachablePositions.push(nextPosition)
-    } else if (currentPosition.burn_remaining > 0) {
+    } else if (currentPosition.burnsRemaining > 0) {
         //console.log("using remaining burn")
 
         const nextPosition = new Position(currentPosition.turn,
-            currentPosition.burns + 1,
-            currentPosition.burn_remaining - 1,
-            currentPosition.pivots_remaining,
+            currentPosition.burns + currentPosition.currentEngine.burnCost,
+            currentPosition.burnsRemaining - 1,
+            currentPosition.pivotsRemaining,
             currentPosition.risks,
             neighbour.node,
-            currentPosition.current_engine,
+            currentPosition.currentEngine,
             currentPosition,
-            currentPosition.free_burns,
+            currentPosition.freeBurns,
             neighbour.dir)
-        //console.log(nextPosition)
+        nextPosition.tag = "burn"
+
         reachablePositions.push(nextPosition)
     } else {
-        reachablePositions.push(currentPosition.waitTurn())
+        reachablePositions = reachablePositions.concat(currentPosition.waitTurn())
     }
-
     return reachablePositions
 
 }
 
 function singleTurn(currentPosition, burnTurnRisk, neighbour) {
-    //console.log("Making a turn")
 
-    const reachablePositions = []
+    var reachablePositions = []
     //If a turn was made, check if we can make it using pivot
-    if (currentPosition.pivots_remaining > 0) {
-        //console.log("*")
+    if (currentPosition.pivotsRemaining > 0) {
 
         const nextPosition = new Position(currentPosition.turn,
             currentPosition.burns,
-            currentPosition.burn_remaining,
-            currentPosition.pivots_remaining - 1,
+            currentPosition.burnsRemaining,
+            currentPosition.pivotsRemaining - 1,
             currentPosition.risks,
-            neighbour.site,
-            currentPosition.current_engine,
+            neighbour.node,
+            currentPosition.currentEngine,
             currentPosition,
-            currentPosition.free_burns,
+            currentPosition.freeBurns,
             neighbour.dir)
+        nextPosition.tag = "pivot"
+
         reachablePositions.push(nextPosition)
         //If a turn was made, check if we can make it using 2 burns
-    } else if (currentPosition.burn_remaining > 1) {
+    } else if (currentPosition.burnsRemaining > 1) {
         const nextPosition = new Position(currentPosition.turn,
-            currentPosition.burns + 2,
-            currentPosition.burn_remaining - 2,
-            currentPosition.pivots_remaining,
+            currentPosition.burns + currentPosition.currentEngine.burnCost * 2,
+            currentPosition.burnsRemaining - 2,
+            currentPosition.pivotsRemaining,
             currentPosition.risks,
-            neighbour.site,
-            currentPosition.current_engine,
+            neighbour.node,
+            currentPosition.currentEngine,
             currentPosition,
-            currentPosition.free_burns,
+            currentPosition.freeBurns,
             neighbour.dir)
+        nextPosition.tag = "forced turn"
+
         reachablePositions.push(nextPosition)
     }
-    //If no pivots are possible, wait a year AND do tru to turn by burning
-    if (currentPosition.pivots_remaining === 0) {
-        reachablePositions.push(currentPosition.waitTurn())
+    //If no pivots are possible, wait a year AND do try to turn by burning
+    if (currentPosition.pivotsRemaining === 0) {
+        reachablePositions = reachablePositions.concat(currentPosition.waitTurn())
     }
     return reachablePositions
 }
 
 function reachablePositions(currentPosition, burnTurnRiskArray, neighbour) {
     const burnTurnRisk = {burns: burnTurnRiskArray[0], turns: burnTurnRiskArray[1], risks: burnTurnRiskArray[2]}
-    //console.log("reachablePositions")
-    //console.log(currentPosition)
-    //console.log(burnTurnRisk)
-    //console.log(neighbour)
+    // console.log(burnTurnRisk)
     let reachablePositions = []
-    // If a burn was made, make sure engine has enough burns/free burns left
     if (burnTurnRisk.burns === 1) {
         const burnPositions = singleBurn(currentPosition, burnTurnRisk, neighbour)
         reachablePositions = reachablePositions.concat(burnPositions)
     } else if (burnTurnRisk.turns === 1) {
         reachablePositions = reachablePositions.concat(singleTurn(currentPosition, burnTurnRisk, neighbour))
     } else {
-        //console.log("*")
         // Nothing happened, cruising through lagrange point or sth, chilling in my spacecraft while being oblivious to the dangers od space travel
         const nextPosition = new Position(currentPosition.turn,
             currentPosition.burns,
-            currentPosition.burn_remaining,
-            currentPosition.pivots_remaining,
+            currentPosition.burnsRemaining,
+            currentPosition.pivotsRemaining,
             currentPosition.risks,
             neighbour.node,
-            currentPosition.current_engine,
+            currentPosition.currentEngine,
             currentPosition,
-            currentPosition.free_burns,
+            currentPosition.freeBurns,
             neighbour.dir)
+        nextPosition.tag = "crusing"
         reachablePositions.push(nextPosition)
     }
     //console.log("Neighbours")
@@ -252,54 +229,50 @@ function reachablePositions(currentPosition, burnTurnRiskArray, neighbour) {
 
 //getNeighbours: (site,direction, bonus burns)->[(site,direction, bonus burns)]
 // allowed: (id,id)-->bool
-export function dijkstra(getNeighbors, burnTurnRiskExtractor, {zero, add, lessThan}, id, source, allowed, engine) {
-    //console.log("Starting dijikstra")
-    // engine = thrust, pivots
-    // position = turns, burns, remaining_burns, remaining_pivots
-    const distance = {}
-    const previous = {}
-    const zero_distance = {burns: 0, pivots: 0, hazards: 0}
-    const zero_position = new Position(0, 0, engine.burns, engine.pivots, 0, source.node, engine, null, 0, null)
+export function dijkstra(getNeighbors, burnTurnRiskExtractor, {zero, add, lessThan}, id, source, allowed, engines) {
+    console.log(engines)
     let iteration = 0
-    distance[id(source)] = zero
     const positionsQueue = []
-    const positionsHeap = new Heap(null, weightCompare)
-    positionsQueue.push(zero_position)
-    positionsHeap.insert(zero_position.weight(), zero_position)
-
     const bestFound = new Map()
 
-    bestFound.set(source.node, [zero_position])
-    // bestFound.set(id(source.toTupple()), [zero_position])
+    bestFound.set(source.node, [])
+
+    // const positionsHeap = new Heap(null, weightCompare)
+    for (const engine of engines) {
+        // if(!(engine.pivots&&engine.baseThrust&&engine.burnCost)){
+        //     console.log("Missing engine data")
+        //     return null
+        // }
+        const zeroPosition = new Position(1, 0, engine.baseThrust, engine.pivots, 0, source.node, engine, null, 0, null, engines)
+        positionsQueue.push(zeroPosition)
+        bestFound.get(source.node).push(zeroPosition)
+    }
+    // positionsHeap.insert(zero_position.weight(), zero_position)
+
 
     while (positionsQueue.length > 0) {
+        // if(positionsQueue.length>1000)
+        //     break
         iteration = iteration + 1
-        if (iteration % 1000 === 0) {
+        if (iteration % 100000 === 0) {
             console.log("Iteration:")
             console.log(iteration)
             console.log("size")
             console.log(positionsQueue.length)
-            console.log(bestFound)
         }
-        if (iteration === 10000)
-            break
+        // if (iteration == 1000)
+        //     break
 
         const currentPosition = positionsQueue.shift()
 
-        //console.log("Current Position")
-        //console.log(currentPosition)
         const idCurrentPosition = currentPosition.site
 
         if (!bestFound.has(idCurrentPosition)) {
             bestFound.set(idCurrentPosition, [])
         }
-        // if (!isPositionBest(currentPosition, bestFound.get(idCurrentPosition))) {
-        //     continue
-        // }
 
         const neighbours = getNeighbors(currentPosition.toTupple())
-        // console.log("Potential neighbours")
-        // console.log(neighbours)
+        // console.log({position: currentPosition,neigbours:neighbours})
         //console.log(currentPosition.toTupple())
         for (const neighbour of neighbours) {
             //console.log("NExt neighbour")
@@ -316,43 +289,35 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, {zero, add, lessTh
             if (!bestFound.has(neighbour.node)) {
                 bestFound.set(neighbour.node, [])
             }
-            const burnTurnRisk = burnTurnRiskExtractor(currentPosition, neighbour)
+            const burnTurnRisk = burnTurnRiskExtractor(currentPosition.toTupple(), neighbour)
 
             const nextPositions = reachablePositions(currentPosition, burnTurnRisk, neighbour)
-            // //console.log(nextPositions)
             const nextPositions2 = nextPositions.filter(x => {
                 return isPositionBest(x, nextPositions)
             })
-            // //console.log(nextPositions2)
 
             for (const nextPosition of nextPositions) {
-                // Kiedy chcę dodać pozycję do listy?
-                // Kiedy :
-                //          a) nie ma tej pozycji w liście
-                //          b) żadana pozycja w liście jej nie dominuje
-                //Kiedy chcę usunąć pozycję z listy:
-                //          a) kiedy inna pozycja dominuje tę pozycję
-
-                if (nextPosition.burns > 100 || nextPosition.turn > 50) {
-                    continue
-                } else {
-                    // console.log(nextPosition)
-                }
+                const idNeighbour = nextPosition.site
                 if (isPositionBest(nextPosition, bestFound.get(idNeighbour))) {
                     const bestInSite = bestFound.get(idNeighbour)
-                    // console.log("best in site")
-                    // console.log(bestFound)
                     bestFound.set(idNeighbour, bestInSite.filter(x => {
-                        return nextPosition.isBetterThan(x) === 0
+                        return (x.isNotDominating(nextPosition))
                     }))
                     bestFound.get(idNeighbour).push(nextPosition)
+                    const xxx = bestFound.get(idNeighbour).sort(function (a, b) {
+                        return a.burns - b.burns
+                    })
+                    bestFound.set(idNeighbour, xxx)
+                    // console.log(xxx)
                     positionsQueue.push(nextPosition)
                 }
 
             }
+            positionsQueue.sort(function (a, b) {
+                return a.burns < b.burns
+            })
         }
     }
     console.log(bestFound)
-
     return bestFound
 }

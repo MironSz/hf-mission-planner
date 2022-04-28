@@ -16,9 +16,23 @@ const isHF3 = location.search === '?ed=3'
 const map = new Image
 map.src = isHF3 ? HFMap : HF4Map
 main.textContent = 'loading...'
+const sphere0 = ['0.36272382934364455', '0.5730595728419228', '0.151123319733119', '0.8666219009954395', '0.6478148574369198', '0.9409627950397135', '0.4368240342037728', '0.8909469841468036', '0.41814157667403595', '0.8740461469252594', '0.4311797254112899', '0.6629059126241763', '0.9261489166631787', '0.3661984554637969', '0.971894135879019', '0.1461091771138916', '0.5349151568485067', '0.36272382934364455']
+const sphere1 = ['0.569696645044709', '0.12750630492996828', '0.9323891754914411', '0.988140037597792', '0.891950239095429', '0.8517510833579742', '0.8020918061937716', '0.9258094768863108', '0.25254724535264184', '0.3028733357761537', '0.9431649960761752', '0.3486601876436579', '0.8144015775246347', '0.9557171717439816', '0.17775498663439615', '0.880610703614801', '0.6621034565729562', '0.35830747951457287', '0.8259714200819714', '0.971894135879019', '0.1461091771138916']
+const sphere2 = ['0.53253133415193', '0.6298331242626691', '0.13152529515928002', '0.7491605650006234', '0.08474244265171471', '0.45641911923189404', '0.6830019554117492', '0.33353370924875225', '0.8844337980565591', '0.7662353374915887', '0.9946957915375505', '0.8957854272718304', '0.8957854272718304', '0.18202317099163023', '0.3512939316614885', '0.6537643694371449', '0.44954204558498834', '0.11256351357233219', '0.038519111088396674', '0.6677664153547038', '0.02511700411544271', '0.10467082066639066', '0.5227306733230033', '0.7998261316365423']
+const sphere3 = ['0.12904666986673075', '0.007003499137781866', '0.7615932293539489', '0.22209853757812703', '0.42169310126567106', '0.7608582799616022', '0.7438584427949413', '0.7467831424854232', '0.6077586169241691', '0.24195149982812203', '0.7518741724924001', '0.4764830379546452', '0.21902800679841716']
+const sphere4 = ['0.30789913395565915', '0.46097932574630596', '0.20394874437959531', '0.942937505828084', '0.5782744478823085', '0.41989026645434424', '0.27240728235556744', '0.28753195085717254', '0.8491573612358616', '0.8313354525437968', '0.5876327474002074', '0.5448469152107185', '0.854121208040407', '0.854121208040407', '0.20060337189813748', '0.42324119159677664']
+const sphere5 = ['0.21009217614767972', '0.16964672949143877', '0.784619524763774', '0.0664785816865836', '0.16326752060547012']
+const sphere6 = ['0.8621482962342524', '0.547790060077221', '0.06654803290031341', '0.6049519784978001', '0.6294830318273861', '0.38250898898138397']
+const sphere7 = ['0.6848456583017779', '0.6525772490924986', '0.8493612681155245']
 
 const canvas = document.createElement('canvas')
 const overlay = document.createElement('div')
+
+const sphereSeparators = [sphere7, sphere6, sphere5, sphere4, sphere3, sphere2, sphere1, sphere0]
+const sphereSeparators2 = []
+const sphere = new Map()
+
+
 overlay.setAttribute('id', 'overlay')
 map.onload = () => {
     main.textContent = ''
@@ -51,11 +65,22 @@ let highlightedPath = null
 let venus = false
 //FromId
 let pathOrigin = null
+//node -> list of all pareto optimal positions
 let searchTree = null
+let chosenPathId = 0
+let engines = [
+
+    {
+        baseThrust: 1,
+        pivots: 1,
+        burnCost: 1
+    }
+]
 
 const loadData = (json) => {
     mapData = MapData.fromJSON(json)
     setTimeout(draw, 0)
+    calculateSpheres()
 }
 
 if ('data' in localStorage) {
@@ -92,9 +117,10 @@ canvas.onclick = e => {
         }
         console.log("closest id")
         console.log(closestId)
+        sphereSeparators2.push(closestId)
+        console.log(sphereSeparators2)
         if (canPath(closestId)) {
             highlightedPath = extractPathFromSearchTree(pathOrigin, closestId, searchTree)
-            console.log(highlightedPath)
 
             // highlightedPath = drawPath(pathData, pathOrigin, closestId)
             endPathing()
@@ -103,6 +129,38 @@ canvas.onclick = e => {
         }
 
         draw()
+    }
+}
+
+function calculateSpheres() {
+    const {edgeLabels, points} = mapData
+
+    const startingPointNearNeptun = '0.8393093402425826'
+    const startingPointNearUranus = '0.7700452967993057'
+    console.log(edgeLabels)
+    for (let sphereId = 0; sphereId < sphereSeparators.length + 1; sphereId++) {
+        const visitedPoints = new Set()
+        const queue = [startingPointNearNeptun]
+        if (sphereId == 1) {
+            queue.push(startingPointNearUranus)
+        }
+        while (queue.length > 0) {
+            const currentPoint = queue.shift()
+            if (!sphere.has(currentPoint)) {
+                sphere.set(currentPoint, -6 + sphereId)
+
+            }
+            mapData.neighborsOf(currentPoint).forEach(nextPoint => {
+                if (!visitedPoints.has(nextPoint)) {
+                    if (sphereId === sphereSeparators.length || !sphereSeparators[sphereId].includes(nextPoint)) {
+                        queue.push(nextPoint)
+
+                        visitedPoints.add(nextPoint)
+
+                    }
+                }
+            })
+        }
     }
 }
 
@@ -123,11 +181,8 @@ function endPathing() {
 function refreshPath() {
     if (pathOrigin && searchTree) {
         const closestId = nearestPoint(mousePos.x, mousePos.y, id => mapData.points[id].type !== 'decorative')
-
         if (canPath(closestId)) {
             highlightedPath = extractPathFromSearchTree(pathOrigin, closestId, searchTree)
-            console.log(highlightedPath)
-            // highlightedPath = drawPath(pathData, pathOrigin, closestId)
         }
     }
 }
@@ -136,7 +191,6 @@ const mousePos = {x: 0, y: 0} // pct
 canvas.onmousemove = e => {
     mousePos.x = e.offsetX / canvas.width
     mousePos.y = e.offsetY / canvas.height
-
     refreshPath()
     draw()
 }
@@ -199,6 +253,17 @@ window.onkeydown = e => {
         connecting = null
         pathOrigin = null
         highlightedPath = null
+        chosenPathId = 0
+    }
+    // Left Arrow
+    if (e.code === 'ArrowLeft') {
+        chosenPathId = Math.max(0, chosenPathId - 1)
+        refreshPath()
+    }
+    // Right arrow
+    if (e.code === 'ArrowRight') {
+        chosenPathId = chosenPathId + 1
+        refreshPath()
     }
     if (editing) {
         if (e.code === 'KeyA') { // Add edge
@@ -341,50 +406,20 @@ window.onkeydown = e => {
     draw()
 }
 
-//TODO refactor
-// can  transition u->v is allowed
-function allowed(v, u, id) {
-    const {node: uId} = u
-    const {node: vId} = v
-    if (uId === vId) return true
-    if ((id(u) in previous) && mapData.points[u.node].type === 'site') {
-        // Once you enter a site, your turn ends.
-        return false
-    }
-    // Find the last node we were in.
-    let n = u
-    let p
-    while (p = previous[id(n)]) {
-        if (p.node !== uId) break
-        n = p
-    }
-    // If the last node we entered is the same as where we just came from, this
-    // transition is forbidden. (H4e. No U-Turns)
-    return !p || p.node !== vId
+
+function thrustRequired(index) {
+
 }
 
 // Is movement from u to v allowed (in the same turn)
 function allowed2(u, v, id) {
+    return true
     if (u.previous == null || v.previous == null) {
         return true
     }
     //No movement occurred
     if (u.site === v.site) return true
 
-    // if (mapData.points[v.site].type === 'site') {
-    // if ((id(u) in previous) && mapData.points[u.node].type === 'site') {
-    // Once you enter a site, your turn ends.
-    // return false
-    // }
-
-    // TODO check solar calendar
-    // TODO check if thrust is efficient
-
-    if (v.previous.site === u.previous.site) {
-        return false
-    }
-    // If the last node we entered is the same as where we just came from, this
-    // transition is forbidden. (H4e. No U-Turns)
     return true
 }
 
@@ -397,31 +432,32 @@ function getNeighbors(p) {
     if (edgeLabels[node]) {
         Object.keys(edgeLabels[node]).forEach(otherNode => {
             if (edgeLabels[node][otherNode] !== dir) {
-                const directionChangeCost = edgeLabels[node][otherNode] === '0' ? 0 : 2
-                const bonusAfterDirectionChangeBurn = Math.max(bonus - directionChangeCost, 0)
-                ns.push({node, dir: edgeLabels[node][otherNode], bonus: bonusAfterDirectionChangeBurn})
+                ns.push({node, dir: edgeLabels[node][otherNode], bonus: bonus})
             }
         })
     }
-    if (bonus > 0 || dir != null) {
-        // you can always throw away your extra burns if you want.
-        // this also allows the path finder to not have to search for the
-        // destination node at different amounts of bonus.
-        ns.push({node, dir: null, bonus: 0})
-    }
+    // (obecnie zachodzi coś takiego   (a,dir)->(a,null). To błąd!!! musze zobazczyć gdzie to się dodaje
+    // to jest chyba staroć
+    // if (bonus > 0 || dir != null) {
+    //     // you can always throw away your extra burns if you want.
+    //     // this also allows the path finder to not have to search for the
+    //     // destination node at different amounts of bonus.
+    //     ns.push({node, dir: null, bonus: 0})
+    // }
     mapData.neighborsOf(node).forEach(other => {
         if (edgeLabels[other] && edgeLabels[other][node] === '0') {
             return
         }
         if (!(node in edgeLabels) || !(other in edgeLabels[node]) || edgeLabels[node][other] === dir) {
-            const dir = edgeLabels[other] && edgeLabels[other][node] ? edgeLabels[other][node] : null
+            const direction = edgeLabels[other] && edgeLabels[other][node] ? edgeLabels[other][node] : null
             const entryCost = points[other].type === 'burn' ? 1 : 0
             const flybyBoost = points[other].type === 'flyby' || points[other].type === 'venus' ? points[other].flybyBoost : 0
             const bonusAfterEntry = Math.max(bonus - entryCost + flybyBoost, 0)
             if (points[other].type === 'venus' && !venus) {
                 return
             }
-            ns.push({node: other, dir, bonus: bonusAfterEntry})
+            if (!(node === other && dir != null && direction == null))
+                ns.push({node: other, dir: direction, bonus: bonusAfterEntry})
         }
     })
     return ns
@@ -452,7 +488,8 @@ function burnWeight(u, v) {
     if (points[vId].type === 'burn') {
         return bonus > 0 && !points[vId].landing ? 0 : 1
     } else if (points[vId].type === 'hohmann') {
-        return uId === vId && uDir != null && vDir != null && uDir !== vDir ? Math.max(0, 2 - bonus) : 0;
+        return 0;
+        // return uId === vId && uDir != null && vDir != null && uDir !== vDir ? 1 : 0;
     } else if (points[vId].type === 'flyby' || points[vId].type === 'venus') {
         return 0
     } else {
@@ -460,16 +497,19 @@ function burnWeight(u, v) {
     }
 }
 
-// Calculates whether turn took place  while going fromu to v
+// Calculates whether turn took place  while going from u to v
 function turnWeight(u, v) {
     const {node: uId, dir: uDir, bonus} = u
     const {node: vId, dir: vDir} = v
     const {points} = mapData
+    let result = 0
     if (points[vId].type === 'hohmann') {
-        if (uId === vId && uDir != null && vDir == null) return 1
-        return 0
+
+        if (uId === vId && uDir != null && vDir != null) {
+            result = uDir !== vDir ? 1 : 0
+        }
     }
-    return 0
+    return result
 }
 
 function hazardWeight(u, v) {
@@ -508,6 +548,8 @@ function findPath(fromId) {
     // each direction. Moving into either node is
     // free, but switching from one to the other
     // costs 2 burns (or a turn).
+    // After waiting a turn, direction is set to null
+    // to represent free choice of direction
     //  .
     //   `-.         ,-'
     //      `-O.  ,-'
@@ -519,10 +561,7 @@ function findPath(fromId) {
     console.time('calculating paths')
 
     const source = {node: fromId, dir: null, bonus: 0}
-    const pathData = dijkstra(getNeighbors, burnsTurnsHazardsSegments, distance, pathId, source, allowed2, {
-        burns: 2,
-        pivots: 1
-    })
+    const pathData = dijkstra(getNeighbors, burnsTurnsHazardsSegments, distance, pathId, source, allowed2, engines)
 
     console.timeEnd('calculating paths')
 
@@ -532,18 +571,17 @@ function findPath(fromId) {
 // TODO
 function extractPathFromSearchTree(fromId, toId, searchTree) {
     if (searchTree.has(toId)) {
-        let currentPosition = searchTree.get(toId)[0]
-        let path = [{node:toId}]
-        console.log("Extracting path")
-        console.log(currentPosition)
+        let currentPosition = searchTree.get(toId)[Math.min(chosenPathId,searchTree.get(toId).length-1)]
+        let path = [{node: toId}]
+        // console.log({currentPosition:currentPosition, allPositions: searchTree.get(toId)})
+
         while (currentPosition.site !== fromId) {
             currentPosition = currentPosition.previous
 
-            path.push({node:currentPosition.site})
-            // console.log(currentPosition)
+            path.push({node: currentPosition.site})
 
         }
-        console.log(path)
+        // console.log(path)
         return path
     }
 
@@ -571,13 +609,12 @@ function drawPath({distance, previous}, fromId, toId) {
 }
 
 function pathWeight(path) {
-    let weight = distance.zero
-    if (path) {
-        for (let i = 1; i < path.length; i++) {
-            weight = distance.add(weight, burnsTurnsHazardsSegments(path[i - 1], path[i]))
-        }
+    if (!path || !searchTree) {
+        return [0, 0, 0, 0]
     }
-    return weight
+    const lastNodeId = path[0].node
+    const lastPosition = searchTree.get(lastNodeId)[Math.min(chosenPathId, searchTree.get(lastNodeId).length - 1)]
+    return [lastPosition.burns, lastPosition.turn, lastPosition.risks, 0]
 }
 
 let isru = 0
@@ -586,6 +623,34 @@ function setIsru(e) {
     isru = e
     draw()
 }
+
+//example: (3,2,1);(123,123,123)
+function setEngines(newEnginesStr) {
+    const newEngines = []
+    for (let engineStr of newEnginesStr.split(";")) {
+        engineStr = engineStr.replace("(", "")
+        engineStr = engineStr.replace(")", "")
+        const splitted = engineStr.split(",").map(Number)
+        if (splitted[0] == null || splitted[1] == null || splitted[2] == null) {
+
+            console.log("Missing engine data")
+            console.log({0: splitted[0], 1: splitted[1], 2: splitted[2]})
+            return 0
+        }
+        newEngines.push({
+            baseThrust: splitted[0],
+            burnCost: splitted[1],
+            pivots: splitted[2]
+        })
+    }
+    engines = newEngines
+    console.log("Successfully updated engine info, redrawing the map")
+    console.log({egines: engines})
+    beginPathing(pathOrigin)
+    draw()
+
+}
+
 
 function draw() {
     if (!mapData) return
@@ -616,6 +681,7 @@ function draw() {
             ctx.fillStyle = 'transparent'
             ctx.strokeStyle = 'white'
             if (p.type === 'hohmann') {
+
                 ctx.fillStyle = 'green'
             } else if (p.type === 'lagrange' || p.type === 'flyby') {
                 ctx.fillStyle = 'transparent'
@@ -763,7 +829,7 @@ function draw() {
             ctx.arc(p.x * width, p.y * height, 15, 0, 2 * Math.PI)
             ctx.stroke()
             ctx.restore()
-
+            // Print distance on each site
             for (const pId in points) {
                 const p = points[pId]
                 if (p.type === 'site' && p.siteWater >= isru) {
@@ -775,11 +841,11 @@ function draw() {
                     ctx.shadowBlur = 10
                     ctx.textBaseline = 'middle'
                     ctx.textAlign = 'center'
-                    console.log(highlightedPath)
 
                     const path = extractPathFromSearchTree(pathOrigin, pId, searchTree)
                     // const path = drawPath(searchTree, pathOrigin, pId)
-                    const weight = pathWeight(path)[0]
+                    // TODO  change displayed info
+                    let weight = pathWeight(path)
                     const colors = [
                         '#ffffb2',
                         '#fecc5c',
@@ -787,8 +853,8 @@ function draw() {
                         '#f03b20',
                         '#bd0026',
                     ]
-                    ctx.fillStyle = colors[Math.min(colors.length - 1, weight)]
-                    ctx.fillText(weight, p.x * width, p.y * height)
+                    ctx.fillStyle = colors[Math.min(colors.length - 1, weight[0])]
+                    ctx.fillText(weight[0]+"/"+weight[1]+"/"+weight[2], p.x * width, p.y * height)
                     ctx.restore()
                 }
             }
@@ -811,5 +877,6 @@ function draw() {
         ctx.restore()
     }
     const weight = pathWeight(highlightedPath)
-    ReactDOM.render(React.createElement(Overlay, {path: highlightedPath, weight, isru, setIsru}), overlay)
+    // console.log({render:searchTree.get(highlightedPath[0].node).sort(function(a,b){return a.burns-b.burns})})
+    ReactDOM.render(React.createElement(Overlay, {path: highlightedPath, weight, engines, setEngines}), overlay)
 }
