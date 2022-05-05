@@ -17,8 +17,9 @@ export class Position {
             this.engines = engines
         else
             this.engines = previous.engines
-        this.thrust = 0
-        if(freeBurns>10){
+        if (previous)
+            this.thrust = previous.thrust
+        if (freeBurns > 10) {
             console.log("WARNING  big free burn")
             console.log(this)
         }
@@ -149,7 +150,7 @@ function singleBurn(currentPosition, burnTurnRisk, neighbour, spheres) {
         //console.log("using remaining burn")
 
         const nextPosition = new Position(currentPosition.turn,
-            currentPosition.burns + currentPosition.currentEngine.burnCost,
+            currentPosition.burns + currentPosition.currentEngine.burnCost * burnTurnRisk.burns,
             currentPosition.burnsRemaining - 1,
             currentPosition.pivotsRemaining,
             currentPosition.risks,
@@ -161,9 +162,9 @@ function singleBurn(currentPosition, burnTurnRisk, neighbour, spheres) {
         nextPosition.tag = "burn"
 
         reachablePositions.push(nextPosition)
-    } else {
-        reachablePositions = reachablePositions.concat(currentPosition.waitTurn(spheres))
     }
+    reachablePositions = reachablePositions.concat(currentPosition.waitTurn(spheres))
+
     return reachablePositions
 
 }
@@ -216,7 +217,7 @@ function reachablePositions(currentPosition, burnTurnRiskArray, neighbour, spher
     const burnTurnRisk = {burns: burnTurnRiskArray[0], turns: burnTurnRiskArray[1], risks: burnTurnRiskArray[2]}
     // console.log(burnTurnRisk)
     let reachablePositions = []
-    if (burnTurnRisk.burns === 1) {
+    if (burnTurnRisk.burns > 0) {
         const burnPositions = singleBurn(currentPosition, burnTurnRisk, neighbour, spheres)
         reachablePositions = reachablePositions.concat(burnPositions)
     } else if (burnTurnRisk.turns === 1) {
@@ -232,38 +233,25 @@ function reachablePositions(currentPosition, burnTurnRiskArray, neighbour, spher
             currentPosition.currentEngine,
             currentPosition,
             currentPosition.freeBurns + neighbour.bonus,
-            // currentPosition.freeBurns + neighbour.bonus,
             neighbour.dir)
         nextPosition.tag = "crusing"
         reachablePositions.push(nextPosition)
     }
-    //console.log("Neighbours")
-    //console.log(reachablePositions)
     return reachablePositions
 }
 
 
-//getNeighbours: (site,direction, bonus burns)->[(site,direction, bonus burns)]
-// allowed: (id,id)-->bool
-export function dijkstra(getNeighbors, burnTurnRiskExtractor, {
-    zero,
-    add,
-    lessThan
-}, id, source, allowed, engines, spheres) {
+export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, engines, spheres) {
     console.log(engines)
     let iteration = 0
     const bestFound = new Map()
-    const prequelPosition = new Position(0,0,0,0,0,source.node,null,null,0,null,engines)
+    const prequelPosition = new Position(0, 0, 0, 0, 0, source.node, null, null, 0, null, engines)
     const startingPositions = prequelPosition.waitTurn(spheres)
     bestFound.set(source.node, startingPositions)
     const positionsQueue = startingPositions
 
 
-
-
     while (positionsQueue.length > 0) {
-        // if(positionsQueue.length>1000)
-        //     break
         iteration = iteration + 1
         if (iteration % 100000 === 0) {
             console.log("Iteration:")
@@ -271,8 +259,8 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, {
             console.log("size")
             console.log(positionsQueue.length)
         }
-        // if (iteration == 1000)
-        //     break
+        if (iteration === 100)
+            break
 
         const currentPosition = positionsQueue.shift()
 
@@ -283,31 +271,21 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, {
         }
 
         const neighbours = getNeighbors(currentPosition.toTupple())
-        // console.log({position: currentPosition,neigbours:neighbours})
-        //console.log(currentPosition.toTupple())
         for (const neighbour of neighbours) {
-            //console.log("NExt neighbour")
-            //console.log(neighbour)
-            if (!allowed(currentPosition, neighbour, id)) {
-                //console.log("not allowed :(")
-                continue
-            } else {
-                //console.log("allowed :)")
-
-            }
-
-            const idNeighbour = neighbour.node
             if (!bestFound.has(neighbour.node)) {
                 bestFound.set(neighbour.node, [])
             }
             const burnTurnRisk = burnTurnRiskExtractor(currentPosition.toTupple(), neighbour)
 
             const nextPositions = reachablePositions(currentPosition, burnTurnRisk, neighbour, spheres)
-            const nextPositions2 = nextPositions.filter(x => {
-                return isPositionBest(x, nextPositions)
-            })
 
             for (const nextPosition of nextPositions) {
+                if (!allowed(currentPosition, nextPosition)) {
+                    continue
+                }
+                if(nextPosition.burns>50){
+                    continue
+                }
                 const idNeighbour = nextPosition.site
                 if (isPositionBest(nextPosition, bestFound.get(idNeighbour))) {
                     const bestInSite = bestFound.get(idNeighbour)
@@ -329,5 +307,6 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, {
             })
         }
     }
+    console.log({bestFound: bestFound})
     return bestFound
 }

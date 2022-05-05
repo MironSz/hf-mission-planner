@@ -58,6 +58,7 @@ function zoomed({x, y, k}) {
 
 let editing = false
 let mapData = null
+const thrustRequired = new Map()
 let connecting = null
 // Set highlightedPath in order to draw path. Probably of type [id_of_site]
 let highlightedPath = null
@@ -68,18 +69,55 @@ let pathOrigin = null
 let searchTree = null
 let chosenPathId = 0
 let engines = [
-
     {
         baseThrust: 1,
-        pivots: 1,
+        pivots: 0,
         burnCost: 1
     }
+    // ,
+    // {
+    //     baseThrust: 12,
+    //     pivots: 0,
+    //     burnCost: 10
+    // }
 ]
+
+function calculateThrust() {
+    const {edgeLabels, points} = mapData
+
+    for (let pId in points) {
+        const p = points[pId]
+        let size = 0
+        if (p.type === 'site') {
+            size = Number(p.siteSize.replace(/\D/g, ''))
+            thrustRequired.set(pId, size)
+        } else if (p.landing > 0) {
+            let visited = [pId]
+            while (true) {
+                const neighbour = visited.shift()
+                const p = points[neighbour]
+
+                if (p.type === 'site') {
+                    size = Number(p.siteSize.replace(/\D/g, ''))
+                    thrustRequired.set(pId, size)
+                    break
+                }
+                if (p.type !== 'burn' || p.landing > 0) {
+                    visited = visited.concat(mapData.neighborsOf(neighbour))
+                }
+            }
+
+        }
+
+    }
+    console.log({thrustReuire: thrustRequired})
+}
 
 const loadData = (json) => {
     mapData = MapData.fromJSON(json)
     setTimeout(draw, 0)
     calculateSpheres()
+    calculateThrust()
 }
 
 if ('data' in localStorage) {
@@ -128,8 +166,6 @@ canvas.onclick = e => {
 }
 
 function calculateSpheres() {
-    const {edgeLabels, points} = mapData
-
     const startingPointNearNeptun = '0.8393093402425826'
     const startingPointNearUranus = '0.7700452967993057'
     for (let sphereId = 0; sphereId < sphereSeparators.length + 1; sphereId++) {
@@ -175,7 +211,7 @@ function endPathing() {
 function refreshPath() {
     if (pathOrigin && searchTree) {
         const closestId = nearestPoint(mousePos.x, mousePos.y, id => mapData.points[id].type !== 'decorative')
-        if (canPath(closestId)) {
+            if (canPath(closestId)) {
             highlightedPath = extractPathFromSearchTree(pathOrigin, closestId, searchTree)
         }
     }
@@ -401,20 +437,50 @@ window.onkeydown = e => {
 }
 
 
-function thrustRequired(index) {
+function thrust(index) {
+    if (thrustRequired[index] > 0)
+        return thrustRequired[index]
+    // const {edgeLabels, points} = mapData
+    // // console.log({index:index,visited:visited})
+    // visited.add(index)
+    //
+    // if (points[index].type === 'site') {
+    //     const size = Number(points[index].siteSize.replace(/\D/g, ''))
+    //     return size
+    // }
+    // // console.log(visited)
+    // if (points[index].landing !== null) {
+    //     mapData.neighborsOf(index).forEach(nextPoint => {
+    //         if (!visited.has(nextPoint) && (points[nextPoint].type === 'site' || points[nextPoint].landing !== null)) {
+    //             const thrust1 = thrustRequired(nextPoint, visited)
+    //             if (thrust1 > 0)
+    //                 return thrust1
+    //         }
+    //     })
+    //
+    // }
 
+    return -1000
 }
 
 // Is movement from u to v allowed (in the same turn)
-function allowed2(u, v, id) {
-    if (u.previous == null || v.previous == null) {
-        return true
+function allowed(u, v) {
+    const {edgeLabels, points} = mapData
+    if (v.site === '0.9021025505556914') {
+        console.log("Luna landing")
+        console.log({thrust: thrust(v.site, new Set())})
     }
-    //No movement occurred
-    if (u.site === v.site) return true
-    if (v.previous.site === u.site || u.previous.site === v.site)
+    // if()
+    if (u.thrust <= thrust(u.site) || v.thrust <= thrust(v.site)) {
+        return false
+    }
+    if (u.site === v.site && u.turn !== v.turn && points[u.site].landing > 0) {
+        return false
+    }
+    if (u.site === v.site && v.previous.site !== u.site)
         return false
     return true
+
 }
 
 // p is tuple (site,direction, bonus burns)
@@ -527,14 +593,9 @@ function burnsTurnsHazardsSegments(u, v) {
 }
 
 function pathId(p) {
-    // return p.node
-
     return p.dir != null || p.bonus ? `${p.node}@${p.dir}@${p.bonus}` : p.node
 }
 
-// function pathId2(p) {
-//     return p.dir != null || p.bonus ? `${p.node}@${p.dir}@${p.bonus}` : p.node
-// }
 
 function findPath(fromId) {
     // NB for pathfinding along Hohmanns each
@@ -555,7 +616,7 @@ function findPath(fromId) {
     console.time('calculating paths')
 
     const source = {node: fromId, dir: null, bonus: 0}
-    const pathData = dijkstra(getNeighbors, burnsTurnsHazardsSegments, distance, pathId, source, allowed2, engines,sphere)
+    const pathData = dijkstra(getNeighbors, burnsTurnsHazardsSegments, source, allowed, engines, sphere)
 
     console.timeEnd('calculating paths')
 
@@ -564,10 +625,15 @@ function findPath(fromId) {
 
 // TODO
 function extractPathFromSearchTree(fromId, toId, searchTree) {
-    if (searchTree.has(toId)) {
-        let currentPosition = searchTree.get(toId)[Math.min(chosenPathId,searchTree.get(toId).length-1)]
+    if (searchTree.has(toId) && searchTree.get(toId).length > 0) {
+        let currentPosition = searchTree.get(toId)[Math.min(chosenPathId, searchTree.get(toId).length - 1)]
         let path = [{node: toId}]
-        // console.log({currentPosition:currentPosition, allPositions: searchTree.get(toId)})
+        // console.log({
+        //     currentPosition: currentPosition,
+        //     toId: toId,
+        //     allPositions: searchTree.get(toId),
+        //     searchTree: searchTree
+        // })
 
         while (currentPosition.site !== fromId) {
             currentPosition = currentPosition.previous
@@ -850,7 +916,7 @@ function draw() {
                         '#bd0026',
                     ]
                     ctx.fillStyle = colors[Math.min(colors.length - 1, weight[0])]
-                    ctx.fillText(weight[0]+"/"+weight[1]+"/"+weight[2], p.x * width, p.y * height)
+                    ctx.fillText(weight[0] + "/" + weight[1] + "/" + weight[2], p.x * width, p.y * height)
                     ctx.restore()
                 }
             }
