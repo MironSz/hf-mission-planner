@@ -60,6 +60,9 @@ export class Position {
         if (this.turn > position.turn) {
             return true
         }
+        if(this.currentEngine !== position.currentEngine){
+            return true
+        }
         return false
     }
 
@@ -101,10 +104,6 @@ export class Position {
         // if (this.burnsRemaining !== secondPosition.burnsRemaining)
         //     return false
     }
-}
-
-function checkThrust(position, siteId) {
-
 }
 
 
@@ -163,7 +162,7 @@ function singleBurn(currentPosition, burnTurnRisk, neighbour, spheres) {
 
         reachablePositions.push(nextPosition)
     }
-    reachablePositions = reachablePositions.concat(currentPosition.waitTurn(spheres))
+    // reachablePositions = reachablePositions.concat(currentPosition.waitTurn(spheres))
 
     return reachablePositions
 
@@ -205,9 +204,9 @@ function singleTurn(currentPosition, burnTurnRisk, neighbour, spheres) {
         reachablePositions.push(nextPosition)
     }
     //If no pivots are possible, wait a year AND do try to turn by burning
-    if (currentPosition.pivotsRemaining === 0) {
-        reachablePositions = reachablePositions.concat(currentPosition.waitTurn(spheres))
-    }
+    // if (currentPosition.pivotsRemaining === 0) {
+    //     reachablePositions = reachablePositions.concat(currentPosition.waitTurn(spheres))
+    // }
     return reachablePositions
 }
 
@@ -237,6 +236,8 @@ function reachablePositions(currentPosition, burnTurnRiskArray, neighbour, spher
         nextPosition.tag = "crusing"
         reachablePositions.push(nextPosition)
     }
+    if(currentPosition.previous && currentPosition.turn === currentPosition.previous.turn)
+        reachablePositions = reachablePositions.concat(currentPosition.waitTurn(spheres))
     return reachablePositions
 }
 
@@ -250,7 +251,6 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, e
     bestFound.set(source.node, startingPositions)
     const positionsQueue = startingPositions
 
-
     while (positionsQueue.length > 0) {
         iteration = iteration + 1
         if (iteration % 100000 === 0) {
@@ -259,8 +259,8 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, e
             console.log("size")
             console.log(positionsQueue.length)
         }
-        if (iteration === 100)
-            break
+        // if (iteration === 100)
+        //     break
 
         const currentPosition = positionsQueue.shift()
 
@@ -283,7 +283,7 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, e
                 if (!allowed(currentPosition, nextPosition)) {
                     continue
                 }
-                if(nextPosition.burns>50){
+                if (nextPosition.burns > 25) {
                     continue
                 }
                 const idNeighbour = nextPosition.site

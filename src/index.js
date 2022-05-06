@@ -211,7 +211,8 @@ function endPathing() {
 function refreshPath() {
     if (pathOrigin && searchTree) {
         const closestId = nearestPoint(mousePos.x, mousePos.y, id => mapData.points[id].type !== 'decorative')
-            if (canPath(closestId)) {
+        console.log({id:closestId, size: thrustRequired.get(closestId), paths: searchTree.get(closestId)})
+        if (canPath(closestId)) {
             highlightedPath = extractPathFromSearchTree(pathOrigin, closestId, searchTree)
         }
     }
@@ -438,47 +439,25 @@ window.onkeydown = e => {
 
 
 function thrust(index) {
-    if (thrustRequired[index] > 0)
-        return thrustRequired[index]
-    // const {edgeLabels, points} = mapData
-    // // console.log({index:index,visited:visited})
-    // visited.add(index)
-    //
-    // if (points[index].type === 'site') {
-    //     const size = Number(points[index].siteSize.replace(/\D/g, ''))
-    //     return size
-    // }
-    // // console.log(visited)
-    // if (points[index].landing !== null) {
-    //     mapData.neighborsOf(index).forEach(nextPoint => {
-    //         if (!visited.has(nextPoint) && (points[nextPoint].type === 'site' || points[nextPoint].landing !== null)) {
-    //             const thrust1 = thrustRequired(nextPoint, visited)
-    //             if (thrust1 > 0)
-    //                 return thrust1
-    //         }
-    //     })
-    //
-    // }
-
+    if (thrustRequired.has(index))
+        return thrustRequired.get(index)
     return -1000
 }
 
 // Is movement from u to v allowed (in the same turn)
 function allowed(u, v) {
     const {edgeLabels, points} = mapData
-    if (v.site === '0.9021025505556914') {
-        console.log("Luna landing")
-        console.log({thrust: thrust(v.site, new Set())})
-    }
-    // if()
-    if (u.thrust <= thrust(u.site) || v.thrust <= thrust(v.site)) {
+    // Spacecraft must have ebough thrust to enter a landing burn/site
+    if (u.site !== v.site && v.thrust <= thrust(v.site)) {
         return false
     }
-    if (u.site === v.site && u.turn !== v.turn && points[u.site].landing > 0) {
-        return false
-    }
-    if (u.site === v.site && v.previous.site !== u.site)
-        return false
+    // Can't wait a turn on a landing burn
+        if (u.site === v.site && u.turn !== v.turn && points[u.site].landing > 0) {
+            return false
+        }
+    // U-shaped turns are forbidden
+    // if (u.site === v.site && v.previous.site !== u.site)
+    //     return false
     return true
 
 }
