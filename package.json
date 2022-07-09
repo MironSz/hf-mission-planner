@@ -3,14 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "description": "High Frontier Mission Planner",
-
-  "scripts": {
+U  "scripts": {
     "build": "webpack",
     "start:dev": "webpack-dev-server",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
-
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nornagon/hf-mission-planner.git"
@@ -31,6 +29,7 @@
     "css-loader": "^3.2.0",
     "file-loader": "^4.2.0",
     "gh-pages": "^3.1.0",
+    "reactjs-popup": "^2.0.5",
     "style-loader": "^1.0.0",
     "webpack": "^4.41.2",
     "webpack-cli": "^3.3.10",

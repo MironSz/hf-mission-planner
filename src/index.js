@@ -890,17 +890,26 @@ function draw() {
         }
     }
     if (highlightedPath) {
+        const colors = ['rgba(214,15,122,0.7)','rgba(36,84,227,0.7)','rgba(15,214,181,0.7)']
         ctx.save()
         ctx.lineWidth = 20
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
         ctx.strokeStyle = 'rgba(214,15,122,0.7)'
-        const p0 = mapData.points[highlightedPath[0].node]
-        ctx.beginPath()
-        ctx.moveTo(p0.x * width, p0.y * height) // tu nie działa
+        let prevPoint  = mapData.points[highlightedPath[0].node]
+
+        let i=0
         for (let p of highlightedPath.slice(1)) {
+            ctx.beginPath()
+            ctx.moveTo(prevPoint.x * width, prevPoint.y * height) // tu nie działa
+            ctx.strokeStyle = colors[i%3]
             const point = mapData.points[p.node]
             ctx.lineTo(point.x * width, point.y * height)
+            ctx.stroke()
+
+            i=i+1
+            prevPoint = point
+
         }
         ctx.stroke()
         ctx.restore()
