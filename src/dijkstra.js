@@ -142,10 +142,7 @@ function isPositionBest(position, bestPositionInNode) {
 
 
 function singleBurn(currentPosition, burnTurnRisk, neighbour) {
-    // console.log({burn: burnTurnRisk})
-
     var reachablePositions = []
-    // if (currentPosition.freeBurns > 0 ) {
     if (currentPosition.freeBurns > 0 && burnTurnRisk.landing === 0) {
         const nextPosition = new Position(currentPosition.turn,
             currentPosition.burns,
