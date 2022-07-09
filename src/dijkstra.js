@@ -1,5 +1,8 @@
 import Heap from './heap'
 
+//  [9,6,4,3,3,2,2,2,2,2,
+
+
 export class Position {
     constructor(turn, burns, burnRemaining, pivots, risks, site, engine, previous, freeBurns, direction, engines) {
 
@@ -19,10 +22,19 @@ export class Position {
             this.engines = previous.engines
         if (previous)
             this.thrust = previous.thrust
+        else
+            this.thrust = 0
         if (freeBurns > 10) {
             console.log("WARNING  big free burn")
             console.log(this)
         }
+        if (risks > 20) {
+            console.log("WARNING big risk")
+            console.log(this)
+        }
+        this.bonusSites = []
+        if (previous)
+            this.bonusSites = [...previous.bonusSites]
     }
 
     getThrust(spheres, engine) {
@@ -33,7 +45,7 @@ export class Position {
     }
 
     toTupple() {
-        return {node: this.site, dir: this.direction, bonus: 0}
+        return {node: this.site, dir: this.direction, bonus: 0, position: this}
     }
 
     // porównaj turn, burns, burns_remaining, freeBurns, risks, pivotsRemaining
@@ -60,7 +72,7 @@ export class Position {
         if (this.turn > position.turn) {
             return true
         }
-        if(this.currentEngine !== position.currentEngine){
+        if (this.currentEngine !== position.currentEngine) {
             return true
         }
         return false
@@ -73,6 +85,7 @@ export class Position {
             const thrust = this.getThrust(spheres, activeEngine)
             const nextPosition = new Position(this.turn + 1, this.burns, thrust, activeEngine.pivots, this.risks, this.site, activeEngine, this, 0, null)
             nextPosition.thrust = thrust
+            nextPosition.bonusSites = []
             changedEngine.push(nextPosition)
         }
         for (const position of changedEngine) {
@@ -128,16 +141,17 @@ function isPositionBest(position, bestPositionInNode) {
 }
 
 
-function singleBurn(currentPosition, burnTurnRisk, neighbour, spheres) {
+function singleBurn(currentPosition, burnTurnRisk, neighbour) {
     // console.log({burn: burnTurnRisk})
 
     var reachablePositions = []
-    if (currentPosition.freeBurns > 0) {
+    // if (currentPosition.freeBurns > 0 ) {
+    if (currentPosition.freeBurns > 0 && burnTurnRisk.landing === 0) {
         const nextPosition = new Position(currentPosition.turn,
             currentPosition.burns,
             currentPosition.burnsRemaining,
             currentPosition.pivotsRemaining,
-            currentPosition.risks,
+            currentPosition.risks + burnTurnRisk.risks,
             neighbour.node,
             currentPosition.currentEngine,
             currentPosition,
@@ -152,7 +166,7 @@ function singleBurn(currentPosition, burnTurnRisk, neighbour, spheres) {
             currentPosition.burns + currentPosition.currentEngine.burnCost * burnTurnRisk.burns,
             currentPosition.burnsRemaining - 1,
             currentPosition.pivotsRemaining,
-            currentPosition.risks,
+            currentPosition.risks + burnTurnRisk.risks,
             neighbour.node,
             currentPosition.currentEngine,
             currentPosition,
@@ -168,7 +182,7 @@ function singleBurn(currentPosition, burnTurnRisk, neighbour, spheres) {
 
 }
 
-function singleTurn(currentPosition, burnTurnRisk, neighbour, spheres) {
+function singleTurn(currentPosition, burnTurnRisk, neighbour) {
 
     var reachablePositions = []
     //If a turn was made, check if we can make it using pivot
@@ -203,40 +217,40 @@ function singleTurn(currentPosition, burnTurnRisk, neighbour, spheres) {
 
         reachablePositions.push(nextPosition)
     }
-    //If no pivots are possible, wait a year AND do try to turn by burning
-    // if (currentPosition.pivotsRemaining === 0) {
-    //     reachablePositions = reachablePositions.concat(currentPosition.waitTurn(spheres))
-    // }
+
     return reachablePositions
 }
 
 function reachablePositions(currentPosition, burnTurnRiskArray, neighbour, spheres) {
     // if (neighbour.bonus !== 0)
     //     console.log(neighbour)
-    const burnTurnRisk = {burns: burnTurnRiskArray[0], turns: burnTurnRiskArray[1], risks: burnTurnRiskArray[2]}
+    const burnTurnRisk = {burns: burnTurnRiskArray[0], turns: burnTurnRiskArray[1], risks: burnTurnRiskArray[2], landing: burnTurnRiskArray[3]}
     // console.log(burnTurnRisk)
     let reachablePositions = []
     if (burnTurnRisk.burns > 0) {
-        const burnPositions = singleBurn(currentPosition, burnTurnRisk, neighbour, spheres)
+        const burnPositions = singleBurn(currentPosition, burnTurnRisk, neighbour)
         reachablePositions = reachablePositions.concat(burnPositions)
     } else if (burnTurnRisk.turns === 1) {
-        reachablePositions = reachablePositions.concat(singleTurn(currentPosition, burnTurnRisk, neighbour, spheres))
+        reachablePositions = reachablePositions.concat(singleTurn(currentPosition, burnTurnRisk, neighbour))
     } else {
         // Nothing happened, cruising through lagrange point or sth, chilling in my spacecraft while being oblivious to the dangers od space travel
         const nextPosition = new Position(currentPosition.turn,
             currentPosition.burns,
             currentPosition.burnsRemaining,
             currentPosition.pivotsRemaining,
-            currentPosition.risks,
+            currentPosition.risks + burnTurnRisk.risks,
             neighbour.node,
             currentPosition.currentEngine,
             currentPosition,
             currentPosition.freeBurns + neighbour.bonus,
             neighbour.dir)
         nextPosition.tag = "crusing"
+        if (neighbour.bonus > 0) {
+            nextPosition.bonusSites.push(nextPosition.site)
+        }
         reachablePositions.push(nextPosition)
     }
-    if(currentPosition.previous && currentPosition.turn === currentPosition.previous.turn)
+    if (currentPosition.previous && currentPosition.turn === currentPosition.previous.turn)
         reachablePositions = reachablePositions.concat(currentPosition.waitTurn(spheres))
     return reachablePositions
 }
@@ -259,8 +273,8 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, e
             console.log("size")
             console.log(positionsQueue.length)
         }
-        // if (iteration === 100)
-        //     break
+        if (iteration === 1000000)
+            break
 
         const currentPosition = positionsQueue.shift()
 
@@ -283,7 +297,7 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, e
                 if (!allowed(currentPosition, nextPosition)) {
                     continue
                 }
-                if (nextPosition.burns > 25) {
+                if (nextPosition.burns > 25 || nextPositions.risks > 10 || nextPosition.turn > 10) {
                     continue
                 }
                 const idNeighbour = nextPosition.site
@@ -294,6 +308,12 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, e
                     }))
                     bestFound.get(idNeighbour).push(nextPosition)
                     const xxx = bestFound.get(idNeighbour).sort(function (a, b) {
+                        if (a.burns !== b.burns)
+                            return a.burns - b.burns
+                        if (a.risks !== b.risks)
+                            return a.risks - b.risks
+                        if (a.turn !== b.turn)
+                            return a.turn - b.turn
                         return a.burns - b.burns
                     })
                     bestFound.set(idNeighbour, xxx)
@@ -303,7 +323,13 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, e
 
             }
             positionsQueue.sort(function (a, b) {
-                return a.burns < b.burns
+                if (a.burns !== b.burns)
+                    return a.burns - b.burns
+                if (a.risks !== b.risks)
+                    return a.risks - b.risks
+                if (a.turn !== b.turn)
+                    return a.turn - b.turn
+                return a.burns - b.burns
             })
         }
     }

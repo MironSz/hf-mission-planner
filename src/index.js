@@ -211,7 +211,7 @@ function endPathing() {
 function refreshPath() {
     if (pathOrigin && searchTree) {
         const closestId = nearestPoint(mousePos.x, mousePos.y, id => mapData.points[id].type !== 'decorative')
-        console.log({id:closestId, size: thrustRequired.get(closestId), paths: searchTree.get(closestId)})
+        console.log({id: closestId, size: thrustRequired.get(closestId), paths: searchTree.get(closestId)})
         if (canPath(closestId)) {
             highlightedPath = extractPathFromSearchTree(pathOrigin, closestId, searchTree)
         }
@@ -444,20 +444,20 @@ function thrust(index) {
     return -1000
 }
 
-// Is movement from u to v allowed (in the same turn)
+// Is movement from u to v allowed
 function allowed(u, v) {
     const {edgeLabels, points} = mapData
-    // Spacecraft must have ebough thrust to enter a landing burn/site
+    // Spacecraft must have enough thrust to enter a landing burn/site
     if (u.site !== v.site && v.thrust <= thrust(v.site)) {
         return false
     }
     // Can't wait a turn on a landing burn
-        if (u.site === v.site && u.turn !== v.turn && points[u.site].landing > 0) {
-            return false
-        }
+    if (u.site === v.site && u.turn !== v.turn && points[u.site].landing > 0) {
+        return false
+    }
     // U-shaped turns are forbidden
-    // if (u.site === v.site && v.previous.site !== u.site)
-    //     return false
+    if (u.site !== v.site && u.bonusSites.includes(v.site))
+        return false
     return true
 
 }
@@ -535,6 +535,16 @@ function burnWeight(u, v) {
         return 0
     }
 }
+function landingWeight(u,v){
+    const {node: uId, dir: uDir, bonus} = u
+    const {node: vId, dir: vDir} = v
+    const {points} = mapData
+
+    if (points[vId].landing)
+        return 1
+    else
+        return 0
+}
 
 // Calculates whether turn took place  while going from u to v
 function turnWeight(u, v) {
@@ -559,16 +569,17 @@ function hazardWeight(u, v) {
     if (points[vId].hazard)
         return 1
     if (points[vId].type === 'radhaz') {
-        return 0.1 // eh, close enough
+        return Math.max((6 - u.position.thrust),0) // eh, close enough
     }
     return 0
 }
 
 function burnsTurnsHazardsSegments(u, v) {
     const burns = burnWeight(u, v)
-    const turns = turnWeight(u, v) // Assuming infinite thrust and no waiting...
+    const turns = turnWeight(u, v)
     const hazards = hazardWeight(u, v)
-    return [burns, turns, hazards, 1]
+    const landing = landingWeight(u,v)
+    return [burns, turns, hazards, landing]
 }
 
 function pathId(p) {
@@ -602,54 +613,28 @@ function findPath(fromId) {
     return pathData
 }
 
-// TODO
+
 function extractPathFromSearchTree(fromId, toId, searchTree) {
     if (searchTree.has(toId) && searchTree.get(toId).length > 0) {
         let currentPosition = searchTree.get(toId)[Math.min(chosenPathId, searchTree.get(toId).length - 1)]
         let path = [{node: toId}]
-        // console.log({
-        //     currentPosition: currentPosition,
-        //     toId: toId,
-        //     allPositions: searchTree.get(toId),
-        //     searchTree: searchTree
-        // })
 
         while (currentPosition.site !== fromId) {
             currentPosition = currentPosition.previous
 
-            path.push({node: currentPosition.site})
+            path.push({node: currentPosition.site, position: currentPosition})
 
         }
-        // console.log(path)
         return path
     }
 
-}
-
-// TODO ukatnualnić z moją implementacją. Powinno być prościej (yey)
-//  previous jest tablicą, chyba powinna zwracać [id_of_site]
-function drawPath({distance, previous}, fromId, toId) {
-    const source = {node: fromId, dir: null, bonus: 0}
-
-    let shorterTo = {node: toId, dir: null, bonus: 0}
-    let shorterToId = pathId(shorterTo)
-
-    if (shorterToId in distance) {
-        const path = [shorterTo]
-        let cur = shorterTo
-        while (pathId(cur) !== pathId(source)) {
-            const n = previous[pathId(cur)]
-            path.unshift(n)
-            cur = n
-        }
-
-        return path
-    }
 }
 
 function pathWeight(path) {
     if (!path || !searchTree) {
-        return [0, 0, 0, 0]
+        // return null
+        return [null,null,null,null]
+        // return ["-","-","-","-"]
     }
     const lastNodeId = path[0].node
     const lastPosition = searchTree.get(lastNodeId)[Math.min(chosenPathId, searchTree.get(lastNodeId).length - 1)]
@@ -895,7 +880,10 @@ function draw() {
                         '#bd0026',
                     ]
                     ctx.fillStyle = colors[Math.min(colors.length - 1, weight[0])]
-                    ctx.fillText(weight[0] + "/" + weight[1] + "/" + weight[2], p.x * width, p.y * height)
+                    if (weight[0] !== null)
+                        ctx.fillText(weight[0] + "/" + weight[1] + "/" + weight[2], p.x * width, p.y * height)
+                    else
+                        ctx.fillText("",p.x * width, p.y * height)
                     ctx.restore()
                 }
             }
@@ -921,3 +909,35 @@ function draw() {
     // console.log({render:searchTree.get(highlightedPath[0].node).sort(function(a,b){return a.burns-b.burns})})
     ReactDOM.render(React.createElement(Overlay, {path: highlightedPath, weight, engines, setEngines}), overlay)
 }
+
+// if (highlightedPath) {
+//     ctx.save()
+//     ctx.lineWidth = 20
+//     ctx.lineCap = 'round'
+//     ctx.lineJoin = 'round'
+//     ctx.strokeStyle = 'rgba(214,15,122,0.7)'
+//     const p0 = mapData.points[highlightedPath[0].node]
+//     ctx.beginPath()
+//     ctx.moveTo(p0.x * width, p0.y * height)
+//     const colors = ['rgba(0,15,122,0.7)', 'rgba(50,200,122,0.7)', 'rgba(214,15,122,0.7)']
+//     for (let p of highlightedPath) {
+//         ctx.save()
+//         ctx.lineWidth = 20
+//         ctx.lineCap = 'round'
+//         ctx.lineJoin = 'round'
+//         console.log({turn: p.position.turn%colors.length})
+//         ctx.strokeStyle = colors[p.position.turn % colors.length]
+//         const point = mapData.points[p.node]
+//         ctx.beginPath()
+//
+//         ctx.moveTo(p.x * width, p.y * height)
+//         ctx.lineTo(point.x * width, point.y * height)
+//         ctx.stroke()
+//         ctx.restore()
+//
+//
+//     }
+//     // ctx.stroke()
+//     // ctx.restore()
+//     // ctx.stroke()
+// }
