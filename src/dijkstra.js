@@ -4,10 +4,10 @@ import Heap from './heap'
 
 
 export class Position {
-    constructor(turn, burns, burnRemaining, pivots, risks, site, engine, previous, freeBurns, direction, engines) {
+    constructor(turn, fuelSteps, burnRemaining, pivots, risks, site, engine, previous, freeBurns, direction, engines) {
 
         this.turn = turn
-        this.burns = burns
+        this.fuelSteps = fuelSteps
         this.burnsRemaining = burnRemaining
         this.pivotsRemaining = pivots
         this.risks = risks
@@ -26,10 +26,6 @@ export class Position {
             this.thrust = 0
         if (freeBurns > 10) {
             console.log("WARNING  big free burn")
-            console.log(this)
-        }
-        if (risks > 20) {
-            console.log("WARNING big risk")
             console.log(this)
         }
         this.bonusSites = []
@@ -55,7 +51,7 @@ export class Position {
         // if (this.burns > position.burns - position.currentEngine.burnCost * (position.freeBurns + 2 * position.pivotsRemaining))
         if (position.direction !== this.direction)
             return true
-        if (this.burns > position.burns)//- position.currentEngine.burnCost * (position.freeBurns + 2 * position.pivotsRemaining))
+        if (this.fuelSteps > position.fuelSteps)//- position.currentEngine.burnCost * (position.freeBurns + 2 * position.pivotsRemaining))
             return true
 
         if (this.risks > position.risks)
@@ -83,7 +79,7 @@ export class Position {
         const changedEngine = []
         for (const activeEngine of this.engines) {
             const thrust = this.getThrust(spheres, activeEngine)
-            const nextPosition = new Position(this.turn + 1, this.burns, thrust, activeEngine.pivots, this.risks, this.site, activeEngine, this, 0, null)
+            const nextPosition = new Position(this.turn + 1, this.fuelSteps, thrust, activeEngine.pivots, this.risks, this.site, activeEngine, this, 0, null)
             nextPosition.thrust = thrust
             nextPosition.bonusSites = []
             changedEngine.push(nextPosition)
@@ -98,7 +94,7 @@ export class Position {
 
     pEquals(secondPosition) {
         // console.log({dir1: this.direction, dir2: secondPosition.direction, cmp : this.direction !== secondPosition.direction})
-        if (this.burns !== secondPosition.burns)
+        if (this.fuelSteps !== secondPosition.fuelSteps)
             return false
         if (this.turn !== secondPosition.turn)
             return false
@@ -145,7 +141,7 @@ function singleBurn(currentPosition, burnTurnRisk, neighbour) {
     var reachablePositions = []
     if (currentPosition.freeBurns > 0 && burnTurnRisk.landing === 0) {
         const nextPosition = new Position(currentPosition.turn,
-            currentPosition.burns,
+            currentPosition.fuelSteps,
             currentPosition.burnsRemaining,
             currentPosition.pivotsRemaining,
             currentPosition.risks + burnTurnRisk.risks,
@@ -160,7 +156,7 @@ function singleBurn(currentPosition, burnTurnRisk, neighbour) {
         //console.log("using remaining burn")
 
         const nextPosition = new Position(currentPosition.turn,
-            currentPosition.burns + currentPosition.currentEngine.burnCost * burnTurnRisk.burns,
+            currentPosition.fuelSteps + currentPosition.currentEngine.burnCost * burnTurnRisk.burns,
             currentPosition.burnsRemaining - 1,
             currentPosition.pivotsRemaining,
             currentPosition.risks + burnTurnRisk.risks,
@@ -186,7 +182,7 @@ function singleTurn(currentPosition, burnTurnRisk, neighbour) {
     if (currentPosition.pivotsRemaining > 0) {
 
         const nextPosition = new Position(currentPosition.turn,
-            currentPosition.burns,
+            currentPosition.fuelSteps,
             currentPosition.burnsRemaining,
             currentPosition.pivotsRemaining - 1,
             currentPosition.risks,
@@ -201,7 +197,7 @@ function singleTurn(currentPosition, burnTurnRisk, neighbour) {
         //If a turn was made, check if we can make it using 2 burns
     } else if (currentPosition.burnsRemaining > 1) {
         const nextPosition = new Position(currentPosition.turn,
-            currentPosition.burns + currentPosition.currentEngine.burnCost * 2,
+            currentPosition.fuelSteps + currentPosition.currentEngine.burnCost * 2,
             currentPosition.burnsRemaining - 2,
             currentPosition.pivotsRemaining,
             currentPosition.risks,
@@ -232,7 +228,7 @@ function reachablePositions(currentPosition, burnTurnRiskArray, neighbour, spher
     } else {
         // Nothing happened, cruising through lagrange point or sth, chilling in my spacecraft while being oblivious to the dangers od space travel
         const nextPosition = new Position(currentPosition.turn,
-            currentPosition.burns,
+            currentPosition.fuelSteps,
             currentPosition.burnsRemaining,
             currentPosition.pivotsRemaining,
             currentPosition.risks + burnTurnRisk.risks,
@@ -294,7 +290,7 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, e
                 if (!allowed(currentPosition, nextPosition)) {
                     continue
                 }
-                if (nextPosition.burns > 25 || nextPositions.risks > 10 || nextPosition.turn > 10) {
+                if (nextPosition.fuelSteps > 25 || nextPositions.risks > 10 || nextPosition.turn > 24) {
                     continue
                 }
                 const idNeighbour = nextPosition.site
@@ -305,13 +301,13 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, e
                     }))
                     bestFound.get(idNeighbour).push(nextPosition)
                     const xxx = bestFound.get(idNeighbour).sort(function (a, b) {
-                        if (a.burns !== b.burns)
-                            return a.burns - b.burns
+                        if (a.fuelSteps !== b.fuelSteps)
+                            return a.fuelSteps - b.fuelSteps
                         if (a.risks !== b.risks)
                             return a.risks - b.risks
                         if (a.turn !== b.turn)
                             return a.turn - b.turn
-                        return a.burns - b.burns
+                        return a.fuelSteps - b.fuelSteps
                     })
                     bestFound.set(idNeighbour, xxx)
                     // console.log(xxx)
@@ -320,13 +316,13 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, e
 
             }
             positionsQueue.sort(function (a, b) {
-                if (a.burns !== b.burns)
-                    return a.burns - b.burns
+                if (a.fuelSteps !== b.fuelSteps)
+                    return a.fuelSteps - b.fuelSteps
                 if (a.risks !== b.risks)
                     return a.risks - b.risks
                 if (a.turn !== b.turn)
                     return a.turn - b.turn
-                return a.burns - b.burns
+                return a.fuelSteps - b.fuelSteps
             })
         }
     }

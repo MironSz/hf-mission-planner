@@ -1,6 +1,6 @@
 # High Frontier mission planner on steroid
 This project is a fork of an already existing planner TODO by TODO.
-This is a ~cheating tool~ mission planner for the board game [High Frontier](https://boardgamegeek.com/boardgame/281655/high-frontier-4-all). It can help you to find the best route from one place in the solar system to another. It's built in the browser, so there's nothing to download or install.
+This is a ~cheating tool~   ~fun killer~ mission planner for the board game [High Frontier](https://boardgamegeek.com/boardgame/281655/high-frontier-4-all). It can help you to find the best route from one place in the solar system to another. It's built in the browser, so there's nothing to download or install.
 
 Original planner allowed  to find only the shortest path according to one, prespecified parameter. 
 It also didn't allow to specify the spaceship configuration
@@ -15,8 +15,7 @@ Additionaly, it finds and display all optimal paths.
 [☞ **Open HF Mission Planner (4th Ed.)**](https://nornagon.github.io/hf-mission-planner)
 
 
-For example, this trajectory from LEO to the Sol-Oort exit takes 18 burns, 32 turns, and takes your spacecraft through 2 hazard zone-equivalents (a Saturn ring crossing, and several radiation hazard zones)
-![Example trajectory from LEO to the Sol-Oort exit](docs/example-trajectory.png)
+
 
 ## Usage
 
@@ -32,11 +31,27 @@ Press <kbd>Esc</kbd> to clear the current trajectory (or just click on a new sta
 ### Specifying rocket configuration
 Spaceship may have multiple working engines onboards \(the more, the slower the pathfinding\).
 Each engine is described by 3 basic values: base thrust, fuel steps per burn, pivots.
-Additionally, each engine may be solar-powered.
+Additionally, each engine may be solar-powered. Separate engines descriptions are separate by ';'
+
+
 Example engines:
 
+(0,0,1,solar)
+
+![Solar sail](docs/solar sail.png)
+
+(4,3,0)
+
+![random thruster](docs/random thruster.png)
+
+Rocket using both engines:
+(0,0,1,solar);(4,3,0)
 
 ### Optimal paths
+Mission planner finds each path for each there is no better path.
+For example, using rocket "(1,1,0);(10,10,0)" Luna can be reached from LEO in 2 years using 11 fuel steps or in 1 year using 20 fuel steps
+![Path1](docs/high cost  low time path.png)
+![Path2](docs/low cost high time path.png)
 
 ### Hazards and belt rolls
 For the sake of simplicity, I treat each hazard roll as one hazard, and each belt roll as 6-thrust hazards.

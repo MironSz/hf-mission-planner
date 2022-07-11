@@ -72,7 +72,8 @@ let engines = [
     {
         baseThrust: 1,
         pivots: 0,
-        burnCost: 1
+        burnCost: 1,
+        id: 1
     }
     // ,
     // {
@@ -535,7 +536,8 @@ function burnWeight(u, v) {
         return 0
     }
 }
-function landingWeight(u,v){
+
+function landingWeight(u, v) {
     const {node: uId, dir: uDir, bonus} = u
     const {node: vId, dir: vDir} = v
     const {points} = mapData
@@ -569,7 +571,7 @@ function hazardWeight(u, v) {
     if (points[vId].hazard)
         return 1
     if (points[vId].type === 'radhaz') {
-        return Math.max((6 - u.position.thrust),0) // eh, close enough
+        return Math.max((6 - u.position.thrust), 0) // eh, close enough
     }
     return 0
 }
@@ -578,7 +580,7 @@ function burnsTurnsHazardsSegments(u, v) {
     const burns = burnWeight(u, v)
     const turns = turnWeight(u, v)
     const hazards = hazardWeight(u, v)
-    const landing = landingWeight(u,v)
+    const landing = landingWeight(u, v)
     return [burns, turns, hazards, landing]
 }
 
@@ -617,7 +619,7 @@ function findPath(fromId) {
 function extractPathFromSearchTree(fromId, toId, searchTree) {
     if (searchTree.has(toId) && searchTree.get(toId).length > 0) {
         let currentPosition = searchTree.get(toId)[Math.min(chosenPathId, searchTree.get(toId).length - 1)]
-        let path = [{node: toId}]
+        let path = [{node: toId, position:currentPosition}]
 
         while (currentPosition.site !== fromId) {
             currentPosition = currentPosition.previous
@@ -625,6 +627,7 @@ function extractPathFromSearchTree(fromId, toId, searchTree) {
             path.push({node: currentPosition.site, position: currentPosition})
 
         }
+        path.reverse()
         return path
     }
 
@@ -633,12 +636,12 @@ function extractPathFromSearchTree(fromId, toId, searchTree) {
 function pathWeight(path) {
     if (!path || !searchTree) {
         // return null
-        return [null,null,null,null]
+        return [null, null, null, null]
         // return ["-","-","-","-"]
     }
-    const lastNodeId = path[0].node
+    const lastNodeId = path[path.length-1].node
     const lastPosition = searchTree.get(lastNodeId)[Math.min(chosenPathId, searchTree.get(lastNodeId).length - 1)]
-    return [lastPosition.burns, lastPosition.turn, lastPosition.risks, 0]
+    return [lastPosition.fuelSteps, lastPosition.turn, lastPosition.risks, 0]
 }
 
 let isru = 0
@@ -666,6 +669,7 @@ function setEngines(newEnginesStr) {
             baseThrust: splitted[0],
             burnCost: splitted[1],
             pivots: splitted[2],
+            id: newEngines.length,
             solarPowered: solarPowered
         })
     }
@@ -883,70 +887,85 @@ function draw() {
                     if (weight[0] !== null)
                         ctx.fillText(weight[0] + "/" + weight[1] + "/" + weight[2], p.x * width, p.y * height)
                     else
-                        ctx.fillText("",p.x * width, p.y * height)
+                        ctx.fillText("", p.x * width, p.y * height)
                     ctx.restore()
                 }
             }
         }
     }
     if (highlightedPath) {
-        const colors = ['rgba(214,15,122,0.7)','rgba(36,84,227,0.7)','rgba(15,214,181,0.7)']
+        console.log({path:highlightedPath})
+        let prevYear = 0
+
+        const yearEnds = []
+
+
+
+        const colors = ['rgba(214,15,122,0.7)', 'rgba(36,84,227,0.7)', 'rgba(15,214,181,0.7)']
         ctx.save()
         ctx.lineWidth = 20
         ctx.lineCap = 'round'
         ctx.lineJoin = 'round'
-        ctx.strokeStyle = 'rgba(214,15,122,0.7)'
-        let prevPoint  = mapData.points[highlightedPath[0].node]
-
-        let i=0
+        let prevPoint = mapData.points[highlightedPath[0].node]
+        let i = 0
+        prevYear = 1
         for (let p of highlightedPath.slice(1)) {
             ctx.beginPath()
             ctx.moveTo(prevPoint.x * width, prevPoint.y * height) // tu nie działa
-            ctx.strokeStyle = colors[i%3]
             const point = mapData.points[p.node]
+            const currentYear = p.position.turn
+            if (currentYear !== prevYear) {
+                i = i + 1
+                prevYear = currentYear
+                yearEnds.push(p.position)
+
+            }
+            ctx.strokeStyle = colors[i % 3]
             ctx.lineTo(point.x * width, point.y * height)
             ctx.stroke()
-
-            i=i+1
             prevPoint = point
-
         }
+        yearEnds.push(highlightedPath[highlightedPath.length-1].position)
         ctx.stroke()
         ctx.restore()
+
+
+        ctx.save()
+        prevYear = -1
+        ctx.font = 'bold 25px helvetica'
+        ctx.shadowColor = 'black'
+        ctx.shadowOffsetX = 0
+        ctx.shadowOffsetY = 0
+        ctx.shadowBlur = 0
+        ctx.textBaseline = 'middle'
+        ctx.textAlign = 'left'
+        ctx.fillStyle = 'black'
+        ctx.strokeStyle = 'white'
+        ctx.lineWidth=0.5
+
+
+        for (let p of highlightedPath) {
+            const point = mapData.points[p.node]
+            const currentYear = p.position.turn
+            if (currentYear !== prevYear) {
+                const currentYearEnd = yearEnds.shift()
+                prevYear = currentYear
+                ctx.fillText("year: "+ currentYear, point.x * width+50, point.y * height-20)
+                ctx.strokeText("year: "+ currentYear, point.x * width+50, point.y * height-20)
+                ctx.fillText("engine: "+p.position.currentEngine.id, point.x * width+50, point.y * height)
+                ctx.strokeText("engine: "+p.position.currentEngine.id, point.x * width+50, point.y * height)
+                ctx.fillText("fuel steps: "+(currentYearEnd.fuelSteps-p.position.fuelSteps), point.x * width+50, point.y * height+20)
+                ctx.strokeText("fuel steps: "+(currentYearEnd.fuelSteps-p.position.fuelSteps), point.x * width+50, point.y * height+20)
+
+            }
+        }
+        ctx.stroke()
+
+        ctx.restore()
+
+
     }
     const weight = pathWeight(highlightedPath)
     // console.log({render:searchTree.get(highlightedPath[0].node).sort(function(a,b){return a.burns-b.burns})})
     ReactDOM.render(React.createElement(Overlay, {path: highlightedPath, weight, engines, setEngines}), overlay)
 }
-
-// if (highlightedPath) {
-//     ctx.save()
-//     ctx.lineWidth = 20
-//     ctx.lineCap = 'round'
-//     ctx.lineJoin = 'round'
-//     ctx.strokeStyle = 'rgba(214,15,122,0.7)'
-//     const p0 = mapData.points[highlightedPath[0].node]
-//     ctx.beginPath()
-//     ctx.moveTo(p0.x * width, p0.y * height)
-//     const colors = ['rgba(0,15,122,0.7)', 'rgba(50,200,122,0.7)', 'rgba(214,15,122,0.7)']
-//     for (let p of highlightedPath) {
-//         ctx.save()
-//         ctx.lineWidth = 20
-//         ctx.lineCap = 'round'
-//         ctx.lineJoin = 'round'
-//         console.log({turn: p.position.turn%colors.length})
-//         ctx.strokeStyle = colors[p.position.turn % colors.length]
-//         const point = mapData.points[p.node]
-//         ctx.beginPath()
-//
-//         ctx.moveTo(p.x * width, p.y * height)
-//         ctx.lineTo(point.x * width, point.y * height)
-//         ctx.stroke()
-//         ctx.restore()
-//
-//
-//     }
-//     // ctx.stroke()
-//     // ctx.restore()
-//     // ctx.stroke()
-// }

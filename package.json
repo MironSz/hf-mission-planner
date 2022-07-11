@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "High Frontier Mission Planner",
-U  "scripts": {
+  "scripts": {
     "build": "webpack",
     "start:dev": "webpack-dev-server",
     "predeploy": "npm run build",
@@ -11,13 +11,10 @@ U  "scripts": {
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nornagon/hf-mission-planner.git"
+    "url": "git+https://github.com/MironSz/hf-mission-planner.git"
   },
-  "author": "Jeremy Apthorp <nornagon@nornagon.net>",
+  "author": "Miron Szewczyk<mj.szewczyk2@student.uw.edu.pl>",
   "license": "AGPL-3.0-only",
-  "bugs": {
-    "url": "https://github.com/nornagon/hf-mission-planner/issues"
-  },
   "homepage": "https://github.com/nornagon/hf-mission-planner#readme",
   "dependencies": {
     "closure-heap": "^1.0.0",
