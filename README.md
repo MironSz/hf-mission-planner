@@ -1,5 +1,6 @@
 # High Frontier mission planner on steroid
-This project is a fork of an already existing planner TODO by TODO.
+This project is a fork of an already existing [HF4 mission planner ](https://nornagon.github.io/hf-mission-planner).
+
 This is a ~cheating tool~   ~fun killer~ mission planner for the board game [High Frontier](https://boardgamegeek.com/boardgame/281655/high-frontier-4-all). It can help you to find the best route from one place in the solar system to another. It's built in the browser, so there's nothing to download or install.
 
 Original planner allowed  to find only the shortest path according to one, prespecified parameter. 
@@ -12,7 +13,7 @@ Additionaly, it finds and display all optimal paths.
 
 
 
-[☞ **Open HF Mission Planner (4th Ed.)**](https://nornagon.github.io/hf-mission-planner)
+[☞ **Open HF Mission Planner (4th Ed.)**](https://mironsz.github.io/hf-mission-planner/dist/index.html)
 
 
 
@@ -58,6 +59,8 @@ For the sake of simplicity, I treat each hazard roll as one hazard, and each bel
 # Future work
 
 ## Spaceship
+### Intermediate goals
+Shortest path from LEO to IO with Mars pickup? Who knows? Who has time to calculate it by hand?
 ### Mass model
 
 Currently, planner doesn't take under consideration mass of the spaceship. Each space-mission engineer knows, how important 
@@ -65,8 +68,8 @@ this should be and how funky mission may be planned by taking carefully tracking
 the rocket in the orbit before landing.
 ### Afterburn
 Not implemented.
-### Rational fuel cost
-Currently, fuel cost can be only expressed as an integer number instead of rational.
+### Fraction fuel cost
+Currently, fuel cost can be only expressed as an integer number instead of a fraction.
 
 ## Season and event tracking
 No season tracking is currently supported. 
