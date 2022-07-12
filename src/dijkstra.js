@@ -290,7 +290,7 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, e
                 if (!allowed(currentPosition, nextPosition)) {
                     continue
                 }
-                if (nextPosition.fuelSteps > 25 || nextPositions.risks > 10 || nextPosition.turn > 24) {
+                if (nextPosition.fuelSteps > 30 || nextPositions.risks > 50 || nextPosition.turn > 24) {
                     continue
                 }
                 const idNeighbour = nextPosition.site
