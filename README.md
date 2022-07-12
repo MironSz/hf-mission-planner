@@ -13,7 +13,7 @@ Additionaly, it finds and display all optimal paths.
 
 
 
-[☞ **Open HF Mission Planner (4th Ed.)**](https://mironsz.github.io/hf-mission-planner/dist/index.html)
+[☞ **Open HF Mission Planner (4th Ed.)**](https://mironsz.github.io/hf-mission-planner/index.html)
 
 
 
