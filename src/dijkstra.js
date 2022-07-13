@@ -121,19 +121,11 @@ function isPositionBest(position, bestPositionInNode) {
         for (const positionInNode of bestPositionInNode) {
             // If there exist position which is better or equal
             if (!positionInNode.isNotDominating(position) || positionInNode.pEquals(position)) {
-                // console.log("Found better")
-                // console.log({u:position,v:positionInNode, cmp: positionInNode.isNotDominating(position) ,  eq: positionInNode.pEquals(positionInNode) })
-                // if (positionInNode.isBetterThan(position) === 1 || positionInNode.pEquals(position)) {
-                // console.log("It is not")
                 return false
             }
         }
     }
-    // console.log("Didnt find better")
-    // console.log({u:position})
-
     return true
-
 }
 
 
@@ -217,7 +209,12 @@ function singleTurn(currentPosition, burnTurnRisk, neighbour) {
 function reachablePositions(currentPosition, burnTurnRiskArray, neighbour, spheres) {
     // if (neighbour.bonus !== 0)
     //     console.log(neighbour)
-    const burnTurnRisk = {burns: burnTurnRiskArray[0], turns: burnTurnRiskArray[1], risks: burnTurnRiskArray[2], landing: burnTurnRiskArray[3]}
+    const burnTurnRisk = {
+        burns: burnTurnRiskArray[0],
+        turns: burnTurnRiskArray[1],
+        risks: burnTurnRiskArray[2],
+        landing: burnTurnRiskArray[3]
+    }
     // console.log(burnTurnRisk)
     let reachablePositions = []
     if (burnTurnRisk.burns > 0) {
@@ -290,6 +287,7 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, e
                 if (!allowed(currentPosition, nextPosition)) {
                     continue
                 }
+                // if (nextPosition.fuelSteps > 3 || nextPositions.risks > 50 || nextPosition.turn > 24) {
                 if (nextPosition.fuelSteps > 30 || nextPositions.risks > 50 || nextPosition.turn > 24) {
                     continue
                 }
@@ -326,6 +324,30 @@ export function dijkstra(getNeighbors, burnTurnRiskExtractor, source, allowed, e
             })
         }
     }
-    console.log({bestFound: bestFound})
-    return bestFound
+
+    // Some paths may be optimal internally (for example because of different current engine)
+    // but  suboptimal if looking only at cost,years,risks
+    const finalBestFound = new Map()
+    for (const node of bestFound.keys()) {
+        const finalBestInNode = []
+        bestFound.get(node).forEach(path => {
+            // Checking if better path exist
+            let betterPathExist = bestFound.get(node).findIndex(otherPath => {
+                // If all parameters from the other path are not worse than this path
+                if (otherPath.turn <= path.turn && otherPath.fuelSteps <= path.fuelSteps && otherPath.risks <= path.risks) {
+                    // and one parameter from the other path is better
+                    if (otherPath.turn < path.turn || otherPath.fuelSteps < path.fuelSteps || otherPath.risks < path.risks) {
+                        return true
+                    }
+                }
+                return false
+            })
+
+            if (betterPathExist === -1) {
+                finalBestInNode.push(path)
+            }
+        })
+        finalBestFound.set(node, finalBestInNode)
+    }
+    return finalBestFound
 }
