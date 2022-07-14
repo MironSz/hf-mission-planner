@@ -527,7 +527,7 @@ function burnWeight(u, v) {
     const {node: vId, dir: vDir} = v
     const {points} = mapData
     // I give up, can't understand why this ONE point doesn't work...
-    if(vId == "0.7518741724924001"){
+    if (vId == "0.7518741724924001") {
         return 1
     }
     if (points[vId].type === 'burn') {
@@ -571,7 +571,7 @@ function turnWeight(u, v) {
 function hazardWeight(u, v) {
     const {node: uId} = u
     const {node: vId} = v
-    if(vId == "0.7518741724924001"){
+    if (vId == "0.7518741724924001") {
         return 0
     }
     if (uId === vId) return 0
@@ -627,7 +627,7 @@ function findPath(fromId) {
 function extractPathFromSearchTree(fromId, toId, searchTree) {
     if (searchTree.has(toId) && searchTree.get(toId).length > 0) {
         let currentPosition = searchTree.get(toId)[Math.min(chosenPathId, searchTree.get(toId).length - 1)]
-        let path = [{node: toId, position:currentPosition}]
+        let path = [{node: toId, position: currentPosition}]
 
         while (currentPosition.site !== fromId) {
             currentPosition = currentPosition.previous
@@ -643,13 +643,11 @@ function extractPathFromSearchTree(fromId, toId, searchTree) {
 
 function pathWeight(path) {
     if (!path || !searchTree) {
-        // return null
-        return [null, null, null, null]
-        // return ["-","-","-","-"]
+        return [null, null, null, null, null]
     }
-    const lastNodeId = path[path.length-1].node
+    const lastNodeId = path[path.length - 1].node
     const lastPosition = searchTree.get(lastNodeId)[Math.min(chosenPathId, searchTree.get(lastNodeId).length - 1)]
-    return [lastPosition.fuelSteps, lastPosition.turn, lastPosition.risks, 0]
+    return [lastPosition.fuelSteps, lastPosition.turn, lastPosition.risks, Math.min(chosenPathId+1, searchTree.get(lastNodeId).length), searchTree.get(lastNodeId).length]
 }
 
 let isru = 0
@@ -902,11 +900,10 @@ function draw() {
         }
     }
     if (highlightedPath) {
-        console.log({path:highlightedPath})
+        console.log({path: highlightedPath})
         let prevYear = 0
 
         const yearEnds = []
-
 
 
         const colors = ['rgba(214,15,122,0.7)', 'rgba(36,84,227,0.7)', 'rgba(15,214,181,0.7)']
@@ -933,7 +930,7 @@ function draw() {
             ctx.stroke()
             prevPoint = point
         }
-        yearEnds.push(highlightedPath[highlightedPath.length-1].position)
+        yearEnds.push(highlightedPath[highlightedPath.length - 1].position)
         ctx.stroke()
         ctx.restore()
 
@@ -949,7 +946,7 @@ function draw() {
         ctx.textAlign = 'left'
         ctx.fillStyle = 'black'
         ctx.strokeStyle = 'white'
-        ctx.lineWidth=0.5
+        ctx.lineWidth = 0.5
 
 
         for (let p of highlightedPath) {
@@ -958,12 +955,12 @@ function draw() {
             if (currentYear !== prevYear) {
                 const currentYearEnd = yearEnds.shift()
                 prevYear = currentYear
-                ctx.fillText("year: "+ currentYear, point.x * width+50, point.y * height-20)
-                ctx.strokeText("year: "+ currentYear, point.x * width+50, point.y * height-20)
-                ctx.fillText("engine: "+p.position.currentEngine.id, point.x * width+50, point.y * height)
-                ctx.strokeText("engine: "+p.position.currentEngine.id, point.x * width+50, point.y * height)
-                ctx.fillText("fuel steps: "+(currentYearEnd.fuelSteps-p.position.fuelSteps), point.x * width+50, point.y * height+20)
-                ctx.strokeText("fuel steps: "+(currentYearEnd.fuelSteps-p.position.fuelSteps), point.x * width+50, point.y * height+20)
+                ctx.fillText("year: " + currentYear, point.x * width + 50, point.y * height - 20)
+                ctx.strokeText("year: " + currentYear, point.x * width + 50, point.y * height - 20)
+                ctx.fillText("engine: " + p.position.currentEngine.id, point.x * width + 50, point.y * height)
+                ctx.strokeText("engine: " + p.position.currentEngine.id, point.x * width + 50, point.y * height)
+                ctx.fillText("fuel steps: " + (currentYearEnd.fuelSteps - p.position.fuelSteps), point.x * width + 50, point.y * height + 20)
+                ctx.strokeText("fuel steps: " + (currentYearEnd.fuelSteps - p.position.fuelSteps), point.x * width + 50, point.y * height + 20)
 
             }
         }
@@ -974,7 +971,7 @@ function draw() {
 
     }
     const weight = pathWeight(highlightedPath)
-    console.log({path:highlightedPath})
+    console.log({path: highlightedPath})
     // console.log({render:searchTree.get(highlightedPath[0].node).sort(function(a,b){return a.burns-b.burns})})
     ReactDOM.render(React.createElement(Overlay, {path: highlightedPath, weight, engines, setEngines}), overlay)
 }
