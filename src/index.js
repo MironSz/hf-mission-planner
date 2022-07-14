@@ -522,11 +522,16 @@ const distance = {
 }
 
 function burnWeight(u, v) {
+
     const {node: uId, dir: uDir, bonus} = u
     const {node: vId, dir: vDir} = v
     const {points} = mapData
+    // I give up, can't understand why this ONE point doesn't work...
+    if(vId == "0.7518741724924001"){
+        return 1
+    }
     if (points[vId].type === 'burn') {
-        return bonus > 0 && !points[vId].landing ? 0 : 1
+        return 1
     } else if (points[vId].type === 'hohmann') {
         return 0;
         // return uId === vId && uDir != null && vDir != null && uDir !== vDir ? 1 : 0;
@@ -566,6 +571,9 @@ function turnWeight(u, v) {
 function hazardWeight(u, v) {
     const {node: uId} = u
     const {node: vId} = v
+    if(vId == "0.7518741724924001"){
+        return 0
+    }
     if (uId === vId) return 0
     const {points} = mapData
     if (points[vId].hazard)
@@ -966,6 +974,7 @@ function draw() {
 
     }
     const weight = pathWeight(highlightedPath)
+    console.log({path:highlightedPath})
     // console.log({render:searchTree.get(highlightedPath[0].node).sort(function(a,b){return a.burns-b.burns})})
     ReactDOM.render(React.createElement(Overlay, {path: highlightedPath, weight, engines, setEngines}), overlay)
 }
