@@ -39,11 +39,11 @@ Example engines:
 
 (0,0,1,solar)
 
-![Solar sail](docs/solar sail.png)
+![Solar sail](docs/solar-sail.png)
 
 (4,3,0)
 
-![random thruster](docs/random thruster.png)
+![random thruster](docs/random-thruster.png)
 
 Rocket using both engines:
 (0,0,1,solar);(4,3,0)
@@ -51,8 +51,8 @@ Rocket using both engines:
 ### Optimal paths
 Mission planner finds each path for each there is no better path.
 For example, using rocket "(1,1,0);(10,10,0)" Luna can be reached from LEO in 2 years using 11 fuel steps or in 1 year using 20 fuel steps
-![Path1](docs/high cost  low time path.png)
-![Path2](docs/low cost high time path.png)
+![Path1](docs/high-cost- low-time-path.png)
+![Path2](docs/low-cost-high-time-path.png)
 
 ### Hazards and belt rolls
 For the sake of simplicity, I treat each hazard roll as one hazard, and each belt roll as 6-thrust hazards.
